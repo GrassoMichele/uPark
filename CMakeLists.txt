@@ -2,17 +2,16 @@ cmake_minimum_required(VERSION 3.19)
 
 set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
 
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin )
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin )
 
 project("upark_rest_server")
 
 find_package(cpprestsdk CONFIG REQUIRED)
 
-#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
-include_directories(/home/michele/Downloads/mysql-connector-c++-8.0.22-linux-glibc2.12-x86-32bit/include)
+include_directories($ENV{MYSQL_CONCPP_DIR}/include)
 
-link_directories(/home/michele/Downloads/mysql-connector-c++-8.0.22-linux-glibc2.12-x86-32bit/lib)
+link_directories($ENV{MYSQL_CONCPP_DIR}/lib)
 
 add_executable(${PROJECT_NAME}        ./src/main.cpp
                                       ./src/controller/upark_controller.cpp

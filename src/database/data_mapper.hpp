@@ -67,7 +67,7 @@ T& DataMapper<T>::Read(int id) {
     std::string relation_name = get_relation_name(T());
 
     typename std::vector<T>::iterator it;
-    it = std::find(cache_unit.begin(), cache_unit.end(), T(id));     //costruttore di conversione
+    it = std::find(cache_unit.begin(), cache_unit.end(), T(id));     //conversion constructor
     if(it!=cache_unit.end()){
         std::cout << relation_name + " with id: " << (*it).getId() << " found in cache!" << std::endl;
         return *it;

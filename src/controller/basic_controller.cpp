@@ -35,8 +35,13 @@ namespace controller_tools {
         return listener.close();
     }
 
-    std::vector<utility::string_t> BasicController::requestPath(const http_request & message) {
-        utility::string_t relativePath = uri::decode(message.relative_uri().path());
+    std::vector<utility::string_t> BasicController::requestPath(const http_request & request) {
+        utility::string_t relativePath = uri::decode(request.relative_uri().path());
         return uri::split_path(relativePath);
+    }
+
+    std::map<utility::string_t, utility::string_t> BasicController::requestQuery(const http_request & request) {
+        utility::string_t relativeQuery = uri::decode(request.relative_uri().query());
+        return uri::split_query(relativeQuery);
     }
 }

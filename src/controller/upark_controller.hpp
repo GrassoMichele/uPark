@@ -3,6 +3,7 @@
 
 #include "basic_controller.hpp"
 #include "controller_interface.hpp"
+#include "../database/data_mapper.hpp"
 
 using namespace controller_tools;
 
@@ -18,6 +19,7 @@ class UParkController : public BasicController, ControllerInterface {
 
     private:
         static json::value responseNotImplemented(const http::method & method);
+        static std::tuple<bool, User> userAuthentication(http_request request);
 };
 
 #endif

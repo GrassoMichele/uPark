@@ -29,6 +29,7 @@ namespace controller_tools {
         virtual void initHttpMethodHandlers() {}
 
         std::vector<utility::string_t> requestPath(const http_request & request);
+        std::map<utility::string_t, utility::string_t> requestQuery(const http_request & request);
 
     };
 }
