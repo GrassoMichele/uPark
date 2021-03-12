@@ -1,5 +1,8 @@
 #include "upark_controller.hpp"
 
+#include <iomanip>
+#include <sstream>
+
 using namespace web;
 using namespace http;
 
@@ -29,13 +32,15 @@ void UParkController::handlePost(http_request request) {
 
     if (!path.empty()) {
 //---
-        if (path[0] == "users" && path[1] == "signup") {
+        if (path[0] == "users" && path[1] == "signup" && path.size() == 2) {                          // endpoint
+            // request - json: {"email":"x", "name":"x", "surname":"x", "password":"x", "id_user_category":id, "upark_code":"x"}
+
             request.extract_json().
             then([=](pplx::task<json::value> requestTask) {                       // task based continuation to handle exception
                 try {
                     json::value signup_request = requestTask.get();               //inside try to return value or handle a possible exception
 
-                    // json: {"email":"x", "name":"x", "surname":"x", "password":"x", "id_user_category":id, "upark_code":"x"}
+                    json::value response = json::value::object(true);
 
                     User u(
                           0,
@@ -49,9 +54,6 @@ void UParkController::handlePost(http_request request) {
                           signup_request.at("id_user_category").as_integer()
                     );
 
-                    json::value response = json::value::object(true) ;
-
-
                     // get category name
                     std::string user_category = mapperUC.Read(u.getIdUserCategory()).getName();
 
@@ -64,9 +66,7 @@ void UParkController::handlePost(http_request request) {
                         request.reply(status_codes::Created, response);
                     }
                     else {
-                        std::cout << "User " << u.getEmail() << " not found in University DB! Some information could be wrong. Please contact university." << '\n';
-                        response["message"] = json::value::string("User " + u.getEmail() + " not found in University DB! Some information could be wrong. Please contact university.!");
-                        request.reply(status_codes::BadRequest, response);
+                        request.reply(status_codes::BadRequest, "User " + u.getEmail() + " not found in University DB! Some information could be wrong. Please contact university!");
                     }
                 }
                 catch(DataMapperException & e) {
@@ -82,9 +82,9 @@ void UParkController::handlePost(http_request request) {
         }
 
 //---
-        if (path[0] == "users" && path[2] == "add-money" && path.size() == 3)  {
+        if (path[0] == "users" && path[2] == "add-money" && path.size() == 3) {
+              //request - json: {"amount":x}
 
-              //JSON: {"amount":x}
               pplx::create_task(std::bind(userAuthentication, request))
               .then([=](pplx::task<std::tuple<bool, User>> resultTask)
               {
@@ -149,7 +149,6 @@ void UParkController::handlePost(http_request request) {
                   }
               });
         }
-
 //---
 
     }
@@ -162,14 +161,15 @@ void UParkController::handleGet(http_request request) {
 
     if (!path.empty()) {
 //---
-        if (path[0] == "ping") {
+        if (path[0] == "ping" && path.size() == 1) {
             json::value response = json::value::object();
             response["status"] = json::value::string("pong!");
             request.reply(status_codes::OK, response);
         }
+
 //---
 
-        else if (path[0] == "user_categories") {
+        else if (path[0] == "user_categories" && path.size() == 1) {
 
             std::vector<UserCategory> user_categories = mapperUC.Read_all();
 
@@ -189,9 +189,10 @@ void UParkController::handleGet(http_request request) {
             }
                 request.reply(status_codes::OK, response);
         }
+
 //---
 
-        else if (path[0] == "login") {
+        else if (path[0] == "login" && path.size() == 1) {
 
             pplx::create_task(std::bind(userAuthentication, request))
             .then([=](pplx::task<std::tuple<bool, User>> resultTask) {
@@ -275,8 +276,62 @@ void UParkController::handleGet(http_request request) {
                 });
         }
 //---
-        else {
-            request.reply(status_codes::NotFound);
+        else if (path[0] == "users" && path.size() == 1) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                        if (requesting_user_category == "Admin") {
+                            std::vector<User> users = mapperU.Read_all();
+
+                            //response is a list of json object
+                            json::value response;
+                            int i=0;
+
+                            for(User u : users){
+                                json::value u_json= json::value::object(true);   // keep_order=true
+                                u_json["id"] = json::value::number(u.getId());
+                                u_json["email"] = json::value::string(u.getEmail());
+                                u_json["name"] = json::value::string(u.getName());
+                                u_json["surname"] = json::value::string(u.getSurname());
+                                u_json["password"] = json::value::string(u.getPassword());
+
+                                // cast double to string because json rounding problem on numbers
+                                std::stringstream decimal_value;
+                                decimal_value << std::fixed << std::setprecision(2) << u.getWallet();
+                                u_json["wallet"] = json::value::string(decimal_value.str());
+
+                                u_json["disability"] = json::value::boolean(u.getDisability());
+                                u_json["active_account"] = json::value::boolean(u.getActiveAccount());
+                                u_json["id_user_category"] = json::value::number(u.getIdUserCategory());
+
+                                response[i++]=u_json;
+                            }
+                                request.reply(status_codes::OK, response);
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized,"You're not admin!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
         }
     }
 }
@@ -367,19 +422,12 @@ void UParkController::handlePut(http_request request) {
 //------------------------------------------------------------------------------
 
 void UParkController::handleDelete(http_request request) {
-    request.reply(status_codes::NotImplemented, responseNotImplemented(methods::DEL));
+    request.reply(status_codes::NotImplemented, methods::DEL + " not implemented!");
 }
 
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-
-json::value UParkController::responseNotImplemented(const http::method & method) {
-    json::value response = json::value::object();
-    response["serviceName"] = json::value::string("uPark server");
-    response["http_method"] = json::value::string(method);
-    return response;
-}
 
 
 std::tuple<bool, User> UParkController::userAuthentication(http_request request){

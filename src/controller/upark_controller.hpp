@@ -18,7 +18,6 @@ class UParkController : public BasicController, ControllerInterface {
         void initHttpMethodHandlers() override;
 
     private:
-        static json::value responseNotImplemented(const http::method & method);
         static std::tuple<bool, User> userAuthentication(http_request request);
 };
 
