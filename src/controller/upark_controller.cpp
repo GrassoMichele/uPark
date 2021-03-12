@@ -235,7 +235,6 @@ void UParkController::handleGet(http_request request) {
             response["status"] = json::value::string("pong!");
             request.reply(status_codes::OK, response);
         }
-
 //---
         // GET user_categories
         else if (path[0] == "user_categories" && path.size() == 1) {
@@ -258,7 +257,6 @@ void UParkController::handleGet(http_request request) {
             }
                 request.reply(status_codes::OK, response);
         }
-
 //---
         // GET login
         else if (path[0] == "login" && path.size() == 1) {
@@ -408,8 +406,50 @@ void UParkController::handleGet(http_request request) {
                 }
             });
         }
-
 //---
+        // GET vehicle_types
+        else if (path[0] == "vehicle_types" && path.size() == 1) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        std::vector<VehicleType> vehicle_types = mapperVT.Read_all();
+
+                        //response is a list of json object
+                        json::value response;
+                        int i=0;
+
+                        for(VehicleType vt : vehicle_types){
+                            json::value vt_json= json::value::object(true);   // keep_order=true
+                            vt_json["id"] = json::value::number(vt.getId());
+                            vt_json["name"] = json::value::string(vt.getName());
+
+                            // cast double to string because json rounding problem on numbers
+                            std::stringstream rate_value;
+                            rate_value << std::fixed << std::setprecision(2) << vt.getRatePercentage();
+                            vt_json["rate_percentage"] = json::value::string(rate_value.str());
+
+                            response[i++]=vt_json;
+                        }
+                            request.reply(status_codes::OK, response);
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
 //---
         else{
             request.reply(status_codes::NotFound);
