@@ -32,6 +32,7 @@ void UParkController::handlePost(http_request request) {
 
     if (!path.empty()) {
 //---
+        // POST users/signup
         if (path[0] == "users" && path[1] == "signup" && path.size() == 2) {                          // endpoint
             // request - json: {"email":"x", "name":"x", "surname":"x", "password":"x", "id_user_category":id, "upark_code":"x"}
 
@@ -82,7 +83,8 @@ void UParkController::handlePost(http_request request) {
         }
 
 //---
-        if (path[0] == "users" && path[2] == "add-money" && path.size() == 3) {
+        // POST users/add_money
+        else if (path[0] == "users" && path[2] == "add_money" && path.size() == 3) {
               //request - json: {"amount":x}
 
               pplx::create_task(std::bind(userAuthentication, request))
@@ -150,7 +152,73 @@ void UParkController::handlePost(http_request request) {
               });
         }
 //---
+        // POST vehicle_types
+        else if (path[0] == "vehicle_types" && path.size() == 1) {
+              //request - json: {"name": "x", "rate_percentage": "x"}
 
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value create_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  if (requesting_user_category == "Admin"){
+
+                                      json::value response = json::value::object(true);
+
+                                      //std::cout << std::stof(create_request.at("rate_percentage").as_string()) << '\n';
+
+                                      VehicleType vt(
+                                          0,
+                                          create_request.at("name").as_string(),
+                                          std::stof(create_request.at("rate_percentage").as_string())
+                                      );
+
+                                      int vehicle_type_id = mapperVT.Create(vt);
+                                      response["message"] = json::value::string("Vehicle type successfully added!");     //provare a togliere
+                                      response["id"] = json::value::number(vehicle_type_id);
+
+                                      request.reply(status_codes::Created, response);
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "Only admin can add vehicle types!");
+                                  }
+                              }
+                              catch(DataMapperException& e) {
+                                  request.reply(status_codes::InternalError, e.what());
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+//---
+        else{
+            request.reply(status_codes::NotFound);
+        }
+    }
+    else{
+        request.reply(status_codes::NotFound);
     }
 }
 
@@ -161,6 +229,7 @@ void UParkController::handleGet(http_request request) {
 
     if (!path.empty()) {
 //---
+        // GET ping
         if (path[0] == "ping" && path.size() == 1) {
             json::value response = json::value::object();
             response["status"] = json::value::string("pong!");
@@ -168,7 +237,7 @@ void UParkController::handleGet(http_request request) {
         }
 
 //---
-
+        // GET user_categories
         else if (path[0] == "user_categories" && path.size() == 1) {
 
             std::vector<UserCategory> user_categories = mapperUC.Read_all();
@@ -191,7 +260,7 @@ void UParkController::handleGet(http_request request) {
         }
 
 //---
-
+        // GET login
         else if (path[0] == "login" && path.size() == 1) {
 
             pplx::create_task(std::bind(userAuthentication, request))
@@ -230,8 +299,8 @@ void UParkController::handleGet(http_request request) {
             });
         }
 //---
-
-        else if (path[0] == "account_info" && path.size() == 2) {
+        // GET users/{id}
+        else if (path[0] == "users" && path.size() == 2) {
 
             pplx::create_task(std::bind(userAuthentication, request))
             .then([=](pplx::task<std::tuple<bool, User>> resultTask)
@@ -256,7 +325,12 @@ void UParkController::handleGet(http_request request) {
                             response["surname"] = json::value::string(requested_user.getSurname());
                             //to change with Base64
                             response["password"] = json::value::string(requested_user.getPassword());
-                            response["wallet"] = json::value::number(requested_user.getWallet());
+
+                            // cast double to string because json rounding problem on numbers
+                            std::stringstream decimal_value;
+                            decimal_value << std::fixed << std::setprecision(2) << requested_user.getWallet();
+                            response["wallet"] = json::value::string(decimal_value.str());
+
                             response["disability"] = json::value::boolean(requested_user.getDisability());
                             response["active_account"] = json::value::boolean(requested_user.getActiveAccount());
                             response["id_user_category"] = json::value::number(requested_user.getIdUserCategory());
@@ -276,6 +350,7 @@ void UParkController::handleGet(http_request request) {
                 });
         }
 //---
+        // GET users
         else if (path[0] == "users" && path.size() == 1) {
 
             pplx::create_task(std::bind(userAuthentication, request))
@@ -335,6 +410,13 @@ void UParkController::handleGet(http_request request) {
         }
 
 //---
+//---
+        else{
+            request.reply(status_codes::NotFound);
+        }
+    }
+    else{
+        request.reply(status_codes::NotFound);
     }
 }
 
@@ -346,6 +428,7 @@ void UParkController::handlePut(http_request request) {
 
     if (!path.empty()) {
 //---
+        // PUT users/{id}
         if (path[0] == "users" && path.size() == 2){
 
             //JSON: {"disability":true, "password":null ,"active_account":true}
@@ -418,6 +501,13 @@ void UParkController::handlePut(http_request request) {
             });
         }
 //---
+//---
+        else{
+            request.reply(status_codes::NotFound);
+        }
+    }
+    else{
+        request.reply(status_codes::NotFound);
     }
 }
 
@@ -425,9 +515,10 @@ void UParkController::handlePut(http_request request) {
 
 void UParkController::handleDelete(http_request request) {
     std::vector< utility::string_t > path = requestPath(request);
-    
+
     if (!path.empty()) {
 
+        // DELETE users/{id}
         if (path[0] == "users" && path.size() == 2){
 
             pplx::create_task(std::bind(userAuthentication, request))
@@ -462,6 +553,14 @@ void UParkController::handleDelete(http_request request) {
                 }
             });
         }
+//---
+//---
+        else{
+            request.reply(status_codes::NotFound);
+        }
+    }
+    else{
+        request.reply(status_codes::NotFound);
     }
 }
 
