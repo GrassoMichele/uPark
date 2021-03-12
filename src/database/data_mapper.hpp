@@ -122,6 +122,7 @@ void DataMapper<T>::Update(T& t){
         }
         catch(DatabaseException& e){
             std::cout << e.what() << std::endl;
+            throw DataMapperException("Update failed!");
         }
     }
     else {
@@ -132,6 +133,7 @@ void DataMapper<T>::Update(T& t){
         }
         catch(DataMapperException& e){
             std::cout << "Update failed!" << std::endl;
+            throw DataMapperException("Update failed!");
         }
     }
 }

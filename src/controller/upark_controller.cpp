@@ -541,6 +541,64 @@ void UParkController::handlePut(http_request request) {
             });
         }
 //---
+        // PUT vehicle_types/{id}
+        else if (path[0] == "vehicle_types" && path.size() == 2){
+
+            //JSON: {"name": "x", "rate_percentage": null}
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        request.extract_json().
+                        then([=](pplx::task<json::value> requestTask) {
+
+                            try {
+                                json::value update_request = requestTask.get();
+
+                                User requesting_user=std::get<1>(result);
+                                std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                                int requested_vehicle_type_id = std::stoi(path[1]);
+
+                                if(requesting_user_category == "Admin"){
+
+                                  VehicleType requested_vehicle_type = mapperVT.Read(requested_vehicle_type_id);
+
+                                  if(!update_request.at("name").is_null())
+                                      requested_vehicle_type.setName(update_request.at("name").as_string());
+
+                                  if(!update_request.at("rate_percentage").is_null())
+                                      requested_vehicle_type.setRatePercentage(std::stof(update_request.at("rate_percentage").as_string()));
+
+                                  mapperVT.Update(requested_vehicle_type);
+                                  request.reply(status_codes::OK, "Vehicle type updated!");
+
+                                }
+                                else {
+                                    request.reply(status_codes::Unauthorized, "Only admin can update vehicle types!");
+                                }
+                            }
+                            catch(DataMapperException & e) {
+                                request.reply(status_codes::InternalError, e.what());
+                            }
+                            catch(json::json_exception & e) {
+                                request.reply(status_codes::BadRequest, "Json body errors!");
+                                return;
+                            }
+                        });
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
 //---
         else{
             request.reply(status_codes::NotFound);
