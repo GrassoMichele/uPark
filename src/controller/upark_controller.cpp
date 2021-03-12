@@ -80,7 +80,78 @@ void UParkController::handlePost(http_request request) {
                 }
             });
         }
+
 //---
+        if (path[0] == "users" && path[2] == "add-money" && path.size() == 3)  {
+
+              //JSON: {"amount":x}
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value update_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  int requested_user_id = std::stoi(path[1]);
+                                  User requested_user = mapperU.Read(requested_user_id);
+
+                                  bool payment_accepted = false;
+                                  float payment_amount = update_request.at("amount").as_number().to_double();
+
+                                  //User wants to modify his wallet.
+                                  if (requesting_user.getId() == requested_user_id || requesting_user_category == "Admin"){
+
+                                      if (requesting_user.getId() == requested_user_id) {
+
+                                          if (payment_amount > 0) {
+                                              // payment method, have to be implemented...
+                                              payment_accepted = true;
+                                          }
+
+                                          if (!payment_accepted || payment_amount <= 0)
+                                              request.reply(status_codes::PaymentRequired, "Payment was not successful!");
+                                              return;
+                                      }
+
+                                      requested_user.setWallet(requested_user.getWallet() + payment_amount);
+                                      mapperU.Update(requested_user);
+
+                                      request.reply(status_codes::Accepted, "Payment accepted, wallet updated!");
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "You can't update wallet of another user!");
+                                  }
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(DataMapperException & e) {
+                      request.reply(status_codes::InternalError, e.what());
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+
+//---
+
     }
 }
 
@@ -152,8 +223,8 @@ void UParkController::handleGet(http_request request) {
                         request.reply(status_codes::Unauthorized, "User doesn't exist or credentials are wrong!");
                     }
                 }
-                catch(std::exception) {
-                    request.reply(status_codes::Unauthorized);
+                catch(UserException& e) {
+                    request.reply(status_codes::Unauthorized, e.what());
                 }
             });
         }
@@ -198,8 +269,8 @@ void UParkController::handleGet(http_request request) {
                         request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
                     }
                 }
-                catch(std::exception) {
-                    request.reply(status_codes::NotFound, "User you're looking for does not exist!");
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
                 }
                 });
         }
@@ -246,7 +317,7 @@ void UParkController::handlePut(http_request request) {
                                     requested_user.setPassword(update_request.at("password").as_string());
 
                                     mapperU.Update(requested_user);
-                                    
+
                                     request.reply(status_codes::OK, "Password correctly updated!");
                                 }
                                 //Admin can modify disability, password, active_account
@@ -273,7 +344,7 @@ void UParkController::handlePut(http_request request) {
                             }
                             catch(json::json_exception & e) {
                                 request.reply(status_codes::BadRequest, "Json body errors!");
-                                //return;
+                                return;
                             }
                         });
                     }
@@ -284,8 +355,8 @@ void UParkController::handlePut(http_request request) {
                 catch(DataMapperException & e) {
                     request.reply(status_codes::InternalError, e.what());
                 }
-                catch(std::exception) {
-                    request.reply(status_codes::NotFound, "User you're looking for does not exist!");
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
                 }
             });
         }
@@ -315,25 +386,25 @@ std::tuple<bool, User> UParkController::userAuthentication(http_request request)
     http_headers headers = request.headers();
 
     if (request.headers().find("Authorization") == headers.end())
-        throw std::exception();
+        throw UserException("No authorization header in http request.");
 
     utility::string_t auth_header = headers["Authorization"];
     std::string::size_type credentials_position = auth_header.find("Basic");
 
     if (credentials_position == std::string::npos)            //If not found
-        throw std::exception();
+        throw UserException("No credentials found in authorization header.");
 
     std::string base64_creds = auth_header.substr(credentials_position + std::string("Basic").length() + 1);
 
     if (base64_creds.empty())
-        throw std::exception();
+        throw UserException("Credentials are empty.");
 
     std::vector<unsigned char> bytes = utility::conversions::from_base64(base64_creds);
     std::string credentials(bytes.begin(), bytes.end());
     std::string::size_type colon_position = credentials.find(":");
 
     if (colon_position == std::string::npos)
-        throw std::exception();
+        throw UserException("No password in authorization header.");
 
     std::string email = credentials.substr(0, colon_position);
     std::string password = credentials.substr(colon_position + 1, credentials.size() - (colon_position + 1));
