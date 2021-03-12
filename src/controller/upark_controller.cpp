@@ -333,6 +333,8 @@ void UParkController::handleGet(http_request request) {
                 }
             });
         }
+
+//---
     }
 }
 
@@ -422,7 +424,45 @@ void UParkController::handlePut(http_request request) {
 //------------------------------------------------------------------------------
 
 void UParkController::handleDelete(http_request request) {
-    request.reply(status_codes::NotImplemented, methods::DEL + " not implemented!");
+    std::vector< utility::string_t > path = requestPath(request);
+    
+    if (!path.empty()) {
+
+        if (path[0] == "users" && path.size() == 2){
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                        int requested_user_id = std::stoi(path[1]);
+
+                        if (requesting_user_category == "Admin") {
+                            mapperU.Delete(requested_user_id);
+                            request.reply(status_codes::OK, "User deleted");
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "Only admin can delete users!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+    }
 }
 
 
