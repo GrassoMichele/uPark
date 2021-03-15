@@ -213,6 +213,64 @@ void UParkController::handlePost(http_request request) {
               });
         }
 //---
+        // POST hourly_rates
+        else if (path[0] == "hourly_rates" && path.size() == 1) {
+              //request - json: {"amount": "x"}
+
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value create_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  if (requesting_user_category == "Admin"){
+
+                                      json::value response = json::value::object(true);
+
+                                      HourlyRate h(
+                                          0,
+                                          std::stof(create_request.at("amount").as_string())
+                                      );
+
+                                      int hourly_rate_id = mapperH.Create(h);
+                                      response["message"] = json::value::string("Hourly rate successfully added!");     //provare a togliere
+                                      response["id"] = json::value::number(hourly_rate_id);
+
+                                      request.reply(status_codes::Created, response);
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "Only admin can add hourly rates!");
+                                  }
+                              }
+                              catch(DataMapperException& e) {
+                                  request.reply(status_codes::InternalError, e.what());
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+//---
         else{
             request.reply(status_codes::NotFound);
         }
@@ -451,6 +509,49 @@ void UParkController::handleGet(http_request request) {
             });
         }
 //---
+        // GET hourly_rates
+        else if (path[0] == "hourly_rates" && path.size() == 1) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        std::vector<HourlyRate> hourly_rates = mapperH.Read_all();
+
+                        //response is a list of json object
+                        json::value response;
+                        int i=0;
+
+                        for(HourlyRate h : hourly_rates){
+                            json::value h_json= json::value::object(true);   // keep_order=true
+                            h_json["id"] = json::value::number(h.getId());
+
+                            // cast double to string because json rounding problem on numbers
+                            std::stringstream amount;
+                            amount << std::fixed << std::setprecision(2) << h.getAmount();
+                            h_json["amount"] = json::value::string(amount.str());
+
+                            response[i++]=h_json;
+                        }
+                            request.reply(status_codes::OK, response);
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
         else{
             request.reply(status_codes::NotFound);
         }
@@ -600,7 +701,63 @@ void UParkController::handlePut(http_request request) {
             });
         }
 //---
-        else{
+        // PUT hourly_rates/{id}
+        else if (path[0] == "hourly_rates" && path.size() == 2){
+
+            //JSON: {"amount": "x"}
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        request.extract_json().
+                        then([=](pplx::task<json::value> requestTask) {
+
+                            try {
+                                json::value update_request = requestTask.get();
+
+                                User requesting_user=std::get<1>(result);
+                                std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                                int requested_hourly_rate_id = std::stoi(path[1]);
+
+                                if(requesting_user_category == "Admin"){
+
+                                  HourlyRate requested_hourly_rate = mapperH.Read(requested_hourly_rate_id);
+
+                                  if(!update_request.at("amount").is_null())
+                                      requested_hourly_rate.setAmount(std::stof(update_request.at("amount").as_string()));
+
+                                  mapperH.Update(requested_hourly_rate);
+                                  request.reply(status_codes::OK, "Hourly rate updated!");
+
+                                }
+                                else {
+                                    request.reply(status_codes::Unauthorized, "Only admin can update hourly rate!");
+                                }
+                            }
+                            catch(DataMapperException & e) {
+                                request.reply(status_codes::InternalError, e.what());
+                            }
+                            catch(json::json_exception & e) {
+                                request.reply(status_codes::BadRequest, "Json body errors!");
+                                return;
+                            }
+                        });
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+        else {
             request.reply(status_codes::NotFound);
         }
     }
@@ -652,8 +809,81 @@ void UParkController::handleDelete(http_request request) {
             });
         }
 //---
+        // DELETE vehicle_types/{id}
+        else if (path[0] == "vehicle_types" && path.size() == 2){
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                        int requested_vehicle_type_id = std::stoi(path[1]);
+
+                        if (requesting_user_category == "Admin") {
+                            mapperVT.Delete(requested_vehicle_type_id);
+                            request.reply(status_codes::OK, "Vehicle type deleted");
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "Only admin can delete vehicle types!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
 //---
-        else{
+
+        // DELETE hourly_rates/{id}
+        else if (path[0] == "hourly_rates" && path.size() == 2){
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                        int requested_hourly_rate_id = std::stoi(path[1]);
+
+                        if (requesting_user_category == "Admin") {
+                            mapperH.Delete(requested_hourly_rate_id);
+                            request.reply(status_codes::OK, "Hourly rate deleted");
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "Only admin can delete hourly rates!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+
+        else {
             request.reply(status_codes::NotFound);
         }
     }

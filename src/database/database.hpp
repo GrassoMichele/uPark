@@ -171,7 +171,7 @@ void Database::update(const T& t){
 
         int success = pstmt->executeUpdate();
         if(success==0){
-            throw DatabaseException(relation_name + " with id " + std::to_string(t.getId()) + " can't be updated because not found in DB!");
+            throw DatabaseException(relation_name + " with id " + std::to_string(t.getId()) + " can't be updated!");
         }
     }
     catch(sql::SQLException& e){
