@@ -271,6 +271,159 @@ void UParkController::handlePost(http_request request) {
               });
         }
 //---
+        // POST users/{id_user}/vehicles
+        else if (path[0] == "users" && path[2] == "vehicles" && path.size() == 3) {
+              //request - json: {"license_plate":"x", "brand":"x", "model":"x", "id_vehicle_type":x}
+
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value create_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  int requested_user_id = std::stoi(path[1]);
+
+                                  json::value response = json::value::object(true);
+
+                                  if (requesting_user.getId() == requested_user_id || requesting_user_category == "Admin"){
+
+                                      Vehicle v(
+                                          0,
+                                          create_request.at("license_plate").as_string(),
+                                          create_request.at("brand").as_string(),
+                                          create_request.at("model").as_string(),
+                                          requested_user_id,
+                                          create_request.at("id_vehicle_type").as_number().to_int64()
+                                      );
+
+                                      int vehicle_id = mapperV.Create(v);
+                                      response["message"] = json::value::string("Vehicle successfully added!");     //provare a togliere
+                                      response["id"] = json::value::number(vehicle_id);
+
+                                      request.reply(status_codes::Created, response);
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "You can't add vehicle to another user !");
+                                  }
+
+                              }
+                              catch(DataMapperException& e) {
+                                  request.reply(status_codes::InternalError, e.what());
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+//---
+        // POST parking_lot
+        else if (path[0] == "parking_lots" && path.size() == 1) {
+              //request - json: {"name":"x", "street":"x", "num_parking_slots":x}
+
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value create_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  json::value response = json::value::object(true);
+
+                                  int num_parking_slots = create_request.at("num_parking_slots").as_number().to_int64();
+
+                                  if (requesting_user_category == "Admin"){
+
+                                      ParkingLot pl(
+                                          0,
+                                          create_request.at("name").as_string(),
+                                          create_request.at("street").as_string(),
+                                          num_parking_slots
+                                      );
+
+                                      int parking_lot_id = mapperPL.Create(pl);
+
+                                      // categories allowed
+                                      for (UserCategory uc : mapperUC.Read_all()) {     // default: all categories
+                                          if (uc.getName() == "admin")
+                                              continue;
+                                          ParkingCategoriesAllowed pca(
+                                              0,
+                                              parking_lot_id,
+                                              uc.getId()
+                                          );
+                                          mapperPCA.Create(pca);
+                                      }
+
+                                      // slots creation
+                                      for (int i = 0; i < num_parking_slots; i++) {
+                                          ParkingSlot ps(
+                                              0,
+                                              i+1,
+                                              parking_lot_id,
+                                              1,                      // default vehicle: type car
+                                              false                   // default: not disability
+                                          );
+                                          mapperPS.Create(ps);
+                                      }
+
+                                      response["message"] = json::value::string("Parking lot with " + std::to_string(num_parking_slots) + " slots successfully added!");
+                                      response["id"] = json::value::number(parking_lot_id);
+
+                                      request.reply(status_codes::Created, response);
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "Only admin can add parking lots!");
+                                  }
+
+                              }
+                              catch(DataMapperException& e) {
+                                  request.reply(status_codes::InternalError, e.what());
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+//---
         else{
             request.reply(status_codes::NotFound);
         }
@@ -552,6 +705,169 @@ void UParkController::handleGet(http_request request) {
             });
         }
 //---
+        // GET hourly_rates
+        else if (path[0] == "vehicles" && path.size() == 1) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                        if (requesting_user_category == "Admin") {
+                            std::vector<Vehicle> vehicles = mapperV.Read_all();
+
+                            //response is a list of json object
+                            json::value response;
+                            int i=0;
+
+                            for(Vehicle v : vehicles){
+                                json::value v_json= json::value::object(true);   // keep_order=true
+                                v_json["id"] = json::value::number(v.getId());
+                                v_json["license_plate"] = json::value::string(v.getLicensePlate());
+                                v_json["brand"] = json::value::string(v.getBrand());
+                                v_json["model"] = json::value::string(v.getModel());
+                                v_json["id_user"] = json::value::number(v.getIdUser());
+                                v_json["id_vehicle_type"] = json::value::number(v.getIdVehicleType());
+
+                                response[i++]=v_json;
+                            }
+                                request.reply(status_codes::OK, response);
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "You can't get all vehicles!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+        // GET users/{id_user}/vehicles
+        else if (path[0] == "users" && path[2] == "vehicles" && path.size() == 3) {
+
+              pplx::create_task(std::bind(userAuthentication, request))
+              .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+              {
+                  try {
+                      std::tuple<bool, User> result = resultTask.get();
+
+                      if (std::get<0>(result) == true){
+
+                          request.extract_json().
+                          then([=](pplx::task<json::value> requestTask) {
+
+                              try {
+                                  json::value create_request = requestTask.get();
+
+                                  User requesting_user=std::get<1>(result);
+                                  std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                                  int requested_user_id = std::stoi(path[1]);
+
+                                  json::value response = json::value::object(true);
+
+                                  if (requesting_user.getId() == requested_user_id || requesting_user_category == "Admin"){
+
+                                      std::vector<Vehicle> vehicles = mapperV.Read_all();
+
+                                      //response is a list of json object
+                                      json::value response;
+                                      int i=0;
+
+                                      for(Vehicle v : vehicles){
+                                          if (v.getIdUser() != requested_user_id)
+                                              continue;
+                                          json::value v_json= json::value::object(true);   // keep_order=true
+                                          v_json["id"] = json::value::number(v.getId());
+                                          v_json["license_plate"] = json::value::string(v.getLicensePlate());
+                                          v_json["brand"] = json::value::string(v.getBrand());
+                                          v_json["model"] = json::value::string(v.getModel());
+                                          v_json["id_user"] = json::value::number(v.getIdUser());
+                                          v_json["id_vehicle_type"] = json::value::number(v.getIdVehicleType());
+
+                                          response[i++]=v_json;
+                                      }
+                                          request.reply(status_codes::OK, response);
+                                  }
+                                  else {
+                                      request.reply(status_codes::Unauthorized, "You can't get vehicles of another user!");
+                                  }
+
+                              }
+                              catch(DataMapperException& e) {
+                                  request.reply(status_codes::InternalError, e.what());
+                              }
+                              catch(json::json_exception & e) {
+                                  request.reply(status_codes::BadRequest, "Json body errors!");
+                              }
+                          });
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                      }
+                  }
+                  catch(UserException& e) {
+                      request.reply(status_codes::NotFound, e.what());
+                  }
+              });
+        }
+//---
+        // GET parking_lot
+        else if (path[0] == "parking_lots" && path.size() == 1) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        std::vector<ParkingLot> parking_lots = mapperPL.Read_all();
+
+                        //response is a list of json object
+                        json::value response;
+                        int i=0;
+
+                        for(ParkingLot pl : parking_lots){
+                            json::value pl_json= json::value::object(true);   // keep_order=true
+                            pl_json["id"] = json::value::number(pl.getId());
+                            pl_json["name"] = json::value::string(pl.getName());
+                            pl_json["street"] = json::value::string(pl.getStreet());
+                            pl_json["num_parking_slots"] = json::value::number(pl.getNumParkingSlots());
+
+                            response[i++]=pl_json;
+                        }
+                            request.reply(status_codes::OK, response);
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+
         else{
             request.reply(status_codes::NotFound);
         }
@@ -757,6 +1073,184 @@ void UParkController::handlePut(http_request request) {
             });
         }
 //---
+        // PUT parking_lots/{id}
+        else if (path[0] == "parking_lots" && path.size() == 2){
+
+            //JSON: {"name": "x", "slots_reserved_disability":{"number":true, "number":false}, "slots_reserved_per_vehicle_types": {"id_vehicle_type":[numbers], ... ,}, "categories_allowed":["id_user_categories"]}
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        request.extract_json().
+                        then([=](pplx::task<json::value> requestTask) {
+
+                            try {
+                                json::value update_request = requestTask.get();
+
+                                User requesting_user=std::get<1>(result);
+                                std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                                int requested_parking_lot_id = std::stoi(path[1]);
+
+                                if (requesting_user_category == "Admin"){
+
+                                  ParkingLot requested_parking_lot = mapperPL.Read(requested_parking_lot_id);
+                                  const int num_parking_slots = requested_parking_lot.getNumParkingSlots();
+
+                                  if(!update_request.at("name").is_null()) {
+                                      requested_parking_lot.setName(update_request.at("name").as_string());
+                                      mapperPL.Update(requested_parking_lot);
+                                  }
+
+                                  std::vector<ParkingSlot> parking_slots = mapperPS.Read_all();
+
+                                  // parking slots of requested parking lot
+                                  parking_slots.erase(std::remove_if(parking_slots.begin(), parking_slots.end(), [requested_parking_lot_id](const ParkingSlot& ps)
+                                      {
+                                          return (ps.getIdParkingLot() != requested_parking_lot_id);
+                                      }), parking_slots.end());
+
+                                  // SLOTS reserved for Disability
+                                  // {"1":true, "2":false}
+                                  if(!update_request.at("slots_reserved_disability").is_null()) {
+
+                                      json::object slots_reserved_disability = update_request.at("slots_reserved_disability").as_object();
+
+                                      for (ParkingSlot ps : parking_slots) {
+
+                                          bool requested_disability = false;
+                                          bool actual_disability = false;
+
+                                          try {
+                                              requested_disability = slots_reserved_disability.at(std::to_string(ps.getNumber())).as_bool();
+                                              actual_disability = ps.getReservedDisability();
+
+                                              // update only if new value != old value
+                                              if (requested_disability != actual_disability) {
+                                                  ps.setReservedDisability(requested_disability);
+                                                  mapperPS.Update(ps);
+                                              }
+                                          }
+                                          catch (json::json_exception& e) {
+                                              std::cout << "No disability info for slot number " << ps.getNumber() << ". Going on..."<< std::endl;
+                                          }
+                                      }
+                                  }
+
+                                  // SLOTS Reserved per vehicle type
+                                  //{"name":null, "slots_reserved_disability":null, "slots_reserved_per_vehicle_types" : {"1":[1,2,3,4], "2":[5,6,7,8], "3":[3,4], "5":[1,2]}}
+                                  if(!update_request.at("slots_reserved_per_vehicle_types").is_null()) {
+
+                                      // {"slots_reserved_per_vehicle_types" : {"1":null, "2":[4,5,6]}     4,5,6 are slot numbers
+                                      json::object json_obj = update_request.at("slots_reserved_per_vehicle_types").as_object();  //{"1":null, "2":[4,5,6]}
+
+                                      std::vector<VehicleType> vehicle_types = mapperVT.Read_all();
+
+                                      std::vector<int>::iterator it;
+
+                                      for (VehicleType vt : vehicle_types) {    //reading vehicle_types, for-each vehicle type(key)     "1", "2" in  {"1":[], "2":[], ....}
+
+                                          try {
+                                              json::array slots_per_vehicle_types = json_obj.at(std::to_string(vt.getId())).as_array();
+                                              std::vector<int> slvt;                // slots per vehicle types
+
+                                              //putting json::array in a vector<int>
+                                              for (int i = 0; i < slots_per_vehicle_types.size(); i++){
+                                                  slvt.push_back(slots_per_vehicle_types.at(i).as_number().to_int64());
+                                              }
+
+                                              // slvt = [1,2,3,4]           number : 1 2 3 4
+                                              for (ParkingSlot ps : parking_slots) {
+                                                it = std::find(std::begin(slvt), std::end(slvt), ps.getNumber());
+                                                    if ((it != std::end(slvt)) && (ps.getIdVehicleType() != vt.getId())){    //!= dal tipo del vehicolo (key)
+                                                        ps.setIdVehicleType(vt.getId());
+                                                        mapperPS.Update(ps);
+                                                    }
+                                              }
+                                          }
+                                          catch(json::json_exception& e) {
+                                              std::cout << "Vehicle type key missing, going on..." << '\n';
+                                          }
+                                      }
+                                  }
+
+                                  //Categories allowed for parking lot
+                                  if(!update_request.at("categories_allowed").is_null()) {
+
+                                      // json : {"id_user_category":true, "id_user_category":false, ...}
+                                      json::object user_categories_allowed = update_request.at("categories_allowed").as_object();
+
+                                      // ottenere tutte le PCA per il parcheggio
+                                      std::vector<ParkingCategoriesAllowed> parking_categories_allowed = mapperPCA.Read_all();
+
+                                      parking_categories_allowed.erase(std::remove_if(parking_categories_allowed.begin(), parking_categories_allowed.end(), [requested_parking_lot_id](const ParkingCategoriesAllowed& pca)
+                                          {
+                                              return (pca.getIdParkingLot() != requested_parking_lot_id);
+                                          }), parking_categories_allowed.end());
+
+                                      // ciclare su tutte le categorie
+                                      for (UserCategory us : mapperUC.Read_all()) {
+
+                                          bool requested_user_category;
+
+                                          // provare a vedere se nel json c'è la particolare id_user_category (chiave)
+                                          try {
+                                              requested_user_category = user_categories_allowed.at(std::to_string(us.getId())).as_bool();
+
+                                              std::vector<ParkingCategoriesAllowed>::iterator it;
+                                              it = std::find_if(std::begin(parking_categories_allowed), std::end(parking_categories_allowed), [us](const ParkingCategoriesAllowed& pca)
+                                              {
+                                                  return (us.getId() == pca.getIdUserCategory());
+                                              });
+
+                                              // se è true va aggiunta la user category solo nel caso in cui non sia già presente
+                                              if (requested_user_category == true && it == std::end(parking_categories_allowed)) {    // if PCA record is not present in DB, and admin wants to have it, we create it.
+                                                  ParkingCategoriesAllowed pca (
+                                                      0,
+                                                      requested_parking_lot_id,
+                                                      us.getId()
+                                                  );
+                                                  mapperPCA.Create(pca);
+                                              }
+                                              else if (requested_user_category == false && it != std::end(parking_categories_allowed)) {    // if PCA record is present in DB, and admin wants to remove it, we delete it.
+                                                  mapperPCA.Delete((*it).getId());
+                                              }
+                                          }
+                                          catch (json::json_exception& e) {
+                                              std::cout << "No user category with key " << us.getId() << " found. Going on..."<< std::endl;
+                                          }
+                                      }
+                                  }
+
+                                  request.reply(status_codes::OK, "Parking lot updated!");
+
+                                }
+                                else {
+                                    request.reply(status_codes::Unauthorized, "Only admin can update parking lots!");
+                                }
+                            }
+                            catch(DataMapperException & e) {
+                                request.reply(status_codes::InternalError, e.what());
+                            }
+                            catch(json::json_exception & e) {
+                                request.reply(status_codes::BadRequest, "Json body errors!");
+                                return;
+                            }
+                        });
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
         else {
             request.reply(status_codes::NotFound);
         }
@@ -845,7 +1339,6 @@ void UParkController::handleDelete(http_request request) {
             });
         }
 //---
-
         // DELETE hourly_rates/{id}
         else if (path[0] == "hourly_rates" && path.size() == 2){
 
@@ -867,6 +1360,44 @@ void UParkController::handleDelete(http_request request) {
                         }
                         else {
                             request.reply(status_codes::Unauthorized, "Only admin can delete hourly rates!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+        // DELETE hourly_rates/{id}
+        else if (path[0] == "users" && path[2] == "vehicles" && path.size() == 4){
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                        int requested_user_id = std::stoi(path[1]);
+                        int requested_vehicle_id = std::stoi(path[3]);
+
+                        if (requesting_user.getId() == requested_user_id || requesting_user_category == "Admin"){
+                            mapperV.Delete(requested_vehicle_id);
+                            request.reply(status_codes::OK, "Vehicle deleted!");
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "Only owner or admin can delete vehicles!");
                         }
                     }
                     else {
