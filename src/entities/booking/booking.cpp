@@ -32,6 +32,10 @@ void Booking::setAmount(float amount){
     this->amount = amount;
 }
 
+void Booking::setNote(std::string note) {
+    this->note = note;
+}
+
 
 int Booking::getId() const{
     return id;

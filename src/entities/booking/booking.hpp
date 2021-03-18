@@ -26,6 +26,7 @@ class Booking{
     void setEntryTime(std::string);
     void setExitTime(std::string);
     void setAmount(float);
+    void setNote(std::string);
 
     int getId() const;
     std::string getDateTimeStart() const;

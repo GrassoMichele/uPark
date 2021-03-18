@@ -34,7 +34,7 @@ void UParkController::handlePost(http_request request) {
     if (!path.empty()) {
 //---
         // POST users/signup
-        if (path[0] == "users" && path[1] == "signup" && path.size() == 2) {                          // endpoint
+        if (path[0] == "users" && path[1] == "signup" && path.size() == 2) {
             // request - json: {"email":"x", "name":"x", "surname":"x", "password":"x", "id_user_category":id, "upark_code":"x"}
 
             request.extract_json().
@@ -82,7 +82,6 @@ void UParkController::handlePost(http_request request) {
                 }
             });
         }
-
 //---
         // POST users/add_money
         else if (path[0] == "users" && path[2] == "add_money" && path.size() == 3) {
@@ -390,7 +389,7 @@ void UParkController::handlePost(http_request request) {
                                       for (int i = 0; i < num_parking_slots; i++) {
                                           ParkingSlot ps(
                                               0,
-                                              i+1,
+                                              i+1,                    // parking slot number starts from 1
                                               parking_lot_id,
                                               1,                      // default vehicle: type car
                                               false                   // default: not disability
@@ -429,24 +428,6 @@ void UParkController::handlePost(http_request request) {
         // POST users/{id_user}/bookings
         else if (path[0] == "users" && path[2] == "bookings" && path.size() == 3) {
               //request - json: {"datetime_start": "x" , "datetime_end": "x", "id_vehicle": x, "id_parking_slot": x}
-
-              //0) check requesting_user = requested_user  OK
-              //1) active_account check  OK
-              //2) wallet not empty check  OK
-              //3) vehicle user ownership check  OK
-
-              //4) check if the cathegory of the user is allowed to the parking lot  OK
-              //5) check if the vehicle type is the same of the parking slot vehicle type allowed OK
-              //6) check if the selected slot is disability reserved and user can occupy that OK
-
-              //7) check that datetime_start is not in the past OK
-              //8) datetime_end > datetime_start OK
-
-              //11) Booking creation handling OK
-
-              //------------------------
-              //9) datetime_start is free of bookings in the requested slot
-              //10) check if wallet has the right amount of money
 
               pplx::create_task(std::bind(userAuthentication, request))
               .then([=](pplx::task<std::tuple<bool, User>> resultTask)
@@ -548,7 +529,7 @@ void UParkController::handlePost(http_request request) {
                                   datetime_start_struct = *(gmtime(&datetime_start_time));
                               }
 
-                              // is it a future date
+                              //is it a future date?
                               double seconds = difftime(timegm(&datetime_start_struct), timegm(&now));
 
                               if (seconds <= 0) {
@@ -562,19 +543,22 @@ void UParkController::handlePost(http_request request) {
 
                               seconds = difftime(timegm(&datetime_end_struct),timegm(&datetime_start_struct));
 
-                              // is datetime_end previous to datetime_start?
+                              //is datetime_end previous to datetime_start?
                               if (seconds <= 0) {
                                   request.reply(status_codes::BadRequest, "Datetime_end is previous or equals to datetime_start!");
                                   return;
                               }
 
-                              //A quarter approssimation to datetime_end
+                              // A quarter approssimation to datetime_end
                               multiple_quarter = ((int) (seconds/60)) % 15;
                               if (multiple_quarter != 0) {
                                   time_t datetime_end_time = timegm(&datetime_end_struct);
                                   datetime_end_time += (15 - multiple_quarter) * 60;
                                   datetime_end_struct = *(gmtime(&datetime_end_time));
                               }
+
+                              time_t datetime_start_time = timegm(&datetime_start_struct);
+                              time_t datetime_end_time = timegm(&datetime_end_struct);
 
                               //datetime_start is free of bookings in the requested slot (included 15 minutes of delay for the removing of vehicle)
                               std::vector<Booking> bookings = mapperB.Read_all();
@@ -587,11 +571,8 @@ void UParkController::handlePost(http_request request) {
 
                               std::vector<Booking>::iterator it_b;
 
-                              it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_struct, &datetime_end_struct](const Booking& b)
+                              it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time](const Booking& b)
                               {
-                                  time_t datetime_start_time = timegm(&datetime_start_struct);
-                                  time_t datetime_end_time = timegm(&datetime_end_struct);
-
                                   //existing booking start_time ad end_time from string to time_t
                                   struct tm existing_b_start_struct;
                                   std::istringstream bdts(b.getDateTimeStart());
@@ -605,17 +586,14 @@ void UParkController::handlePost(http_request request) {
 
                                   //cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
                                   if (difftime((datetime_start_time - (15 * 60)), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
-                                      std::cout << "sono nel primo if" << '\n';
                                       return true;
                                   }
                                   //cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
                                   else if (difftime((datetime_end_time + (15 * 60)), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
-                                      std::cout << "sono nel secondo if" << '\n';
                                       return true;
                                   }
                                   //cheking if existing booking is overlapping with the requested booking
                                   else if (difftime(existing_b_start_time, datetime_start_time) == 0 && difftime(existing_b_end_time, datetime_end_time) == 0){
-                                      std::cout << "sono nel terzo if" << '\n';
                                       return true;
                                   }
                                   else{
@@ -628,9 +606,46 @@ void UParkController::handlePost(http_request request) {
                                   return;
                               }
 
+                              // Calculate booking amount
+                              // hourly_rate * ratepercentage * duration
+                              UserCategory user_category = mapperUC.Read(requesting_user.getIdUserCategory());
+                              int id_hourly_rate = user_category.getIdHourlyRate();
+                              HourlyRate hourly_rate = mapperH.Read(id_hourly_rate);
+                              float hourly_rate_amount = hourly_rate.getAmount();
+
+                              VehicleType vehicle_type = mapperVT.Read(vehicle.getIdVehicleType());
+                              float rate_percentage = vehicle_type.getRatePercentage();
+
+                              double time_interval_seconds = difftime(datetime_end_time, datetime_start_time);
+
+                              // amount_parziale = hourly_rate/3600 * durata_in_secondi
+                              float booking_amount = time_interval_seconds * (hourly_rate_amount/3600) * rate_percentage;
+
+                              //check if user's wallet has enough money
+                              if (requesting_user.getWallet() < booking_amount) {
+                                  request.reply(status_codes::BadRequest, "OPS! You don't have enough money, please add first!");
+                                  return;
+                              }
+
+                              requesting_user.setWallet(requesting_user.getWallet() - booking_amount);
+                              mapperU.Update(requesting_user);
+
+                              // update admin Wallet
+                              std::vector<User> users = mapperU.Read_all();
+                              std::vector<User>::iterator it_u;
+                              it_u = std::find_if(std::begin(users), std::end(users), [](const User& u)
+                              {
+                                  return (mapperUC.Read(u.getIdUserCategory()).getName() == "Admin");
+                              });
+
+                              if (it_u != std::end(users)) {
+                                  User admin = *it_u;
+                                  admin.setWallet(admin.getWallet() + booking_amount);
+                                  mapperU.Update(admin);
+                              }
+
                               //Booking creation handling
                               std::ostringstream os;
-
                               os << std::put_time(&datetime_start_struct, "%F %T");
                               std::string str_datetime_start = os.str();
 
@@ -645,7 +660,7 @@ void UParkController::handlePost(http_request request) {
                                   str_datetime_end,
                                   "",                         //entry_time
                                   "",                         //exit_time
-                                  3.00,                       //amount     --->> TO CALCULATE
+                                  booking_amount,             //amount
                                   requested_user_id,
                                   id_vehicle,                 //id_vehicle
                                   id_parking_slot,            //id_parking_slot
@@ -662,7 +677,9 @@ void UParkController::handlePost(http_request request) {
 
                               response["datetime_end"] = json::value::string(str_datetime_end);
 
-                              response["amount"] = json::value::number(b.getAmount());
+                              std::stringstream decimal_value;
+                              decimal_value << std::fixed << std::setprecision(2) << booking_amount;
+                              response["amount"] = json::value::string(decimal_value.str());
 
                               request.reply(status_codes::Created, response);
 
@@ -685,7 +702,104 @@ void UParkController::handlePost(http_request request) {
           });
         }
 //---
+        // POST crossing
+        else if (path[0] == "crossing" && path.size() == 1) {
+              //request - json: {"license_plate": "x", "id_parking_lot":x, "crossing_type": "entry"/"exit", "auth_token":"x"}
 
+              request.extract_json().
+              then([=](pplx::task<json::value> requestTask) {
+
+                  try {
+                      json::value crossing_request = requestTask.get();
+
+                      if (crossing_request.at("auth_token").as_string() == "UHJvY2Vzc2luZ1NlcnZlcg=="){   // "ProcessingServer" in base64
+
+                          std::string license_plate = crossing_request.at("license_plate").as_string();
+                          int id_parking_lot = crossing_request.at("id_parking_lot").as_number().to_int64();
+                          std::string crossing_type = crossing_request.at("crossing_type").as_string();
+
+                          json::value response = json::value::object(true);
+
+                          std::vector<Booking> bookings = mapperB.Read_all();
+                          std::vector<Booking>::iterator it;
+
+                          time_t current_datetime = time(0);
+
+                          it = std::find_if(std::begin(bookings), std::end(bookings), [current_datetime, license_plate, id_parking_lot, crossing_type](const Booking& b)
+                          {
+                              struct tm existing_b_start_struct;
+                              std::istringstream bdts(b.getDateTimeStart());
+                              bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
+
+                              struct tm existing_b_end_struct;
+                              std::istringstream bdte(b.getDateTimeEnd());
+                              bdte >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
+
+                              // check on booking for user's vehicle
+                              if (b.getIdVehicle() != 0 && mapperV.Read(b.getIdVehicle()).getLicensePlate() != license_plate)
+                                  return false;
+
+                              // check on parking lot
+                              else if (b.getIdParkingSlot() != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot)
+                                  return false;
+
+                              // check on time, entry allowed 5 minutes before booking starts.
+                              else if (crossing_type == "entry" && difftime(current_datetime, timegm(&existing_b_start_struct) - (5*60)) >= 0 && difftime(current_datetime, timegm(&existing_b_end_struct)) < 0)
+                                  return true;
+
+                              else if (crossing_type == "exit" && difftime(current_datetime, timegm(&existing_b_start_struct) - (5*60)) > 0 && difftime(current_datetime, timegm(&existing_b_end_struct) + (15*60)) <= 0)     // after 5 minutes tow truck removes vehicle, within 10 minutes for a total of 15 minutes. After this time vehicle can't be inside park.
+                                  return true;
+                              else
+                                  return false;
+                          });
+
+                          if (it != std::end(bookings)){
+                              std::ostringstream os;
+                              os << std::put_time(gmtime(&current_datetime), "%T");
+                              std::string current_datetime_str = os.str();
+
+                              if (crossing_type == "entry") {
+                                  it->setEntryTime(current_datetime_str);
+                                  mapperB.Update(*it);
+                                  response["open"] = json::value::boolean(true);
+                                  response["message"] = json::value::string("Entry allowed!");
+                                  request.reply(status_codes::OK, response);
+                              }
+                              // crossing_type == "exit"
+                              else {
+                                  struct tm found_b_end_struct;
+                                  std::istringstream bdte(it->getDateTimeEnd());
+                                  bdte >> std::get_time(&found_b_end_struct, "%Y-%m-%d %T");
+
+                                  if (difftime(current_datetime, timegm(&found_b_end_struct) + (5*60)) > 0)
+                                      it->setNote("You have been fined!");
+
+                                  it->setExitTime(current_datetime_str);
+                                  mapperB.Update(*it);
+                                  response["open"] = json::value::boolean(true);
+                                  response["message"] = json::value::string("Exit allowed!");
+                                  request.reply(status_codes::OK, response);
+                              }
+                          }
+                          else {
+                            response["open"] = json::value::boolean(false);
+                            response["message"] = json::value::string("Ops! Can't find appropriate booking for the vehicle.");
+                            request.reply(status_codes::InternalError, response);
+                          }
+                      }
+                      else {
+                          request.reply(status_codes::Unauthorized, "You're not processing server!");
+                      }
+                  }
+                  catch(DataMapperException& e) {
+                      request.reply(status_codes::InternalError, e.what());
+                  }
+                  catch(json::json_exception & e) {
+                      request.reply(status_codes::BadRequest, "Json body errors!");
+                  }
+              });
+        }
+//---
         else{
             request.reply(status_codes::NotFound);
         }
@@ -740,7 +854,6 @@ void UParkController::handleGet(http_request request) {
                 try {
 
                     std::tuple<bool, User> result = resultTask.get();
-
 
                     if (std::get<0>(result) == true){         // if user which requests the API is present in DB_upark (email-password match)
                         User u=std::get<1>(result);
@@ -814,6 +927,9 @@ void UParkController::handleGet(http_request request) {
                     else {
                         request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
                     }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
                 }
                 catch(UserException& e) {
                     request.reply(status_codes::NotFound, e.what());
@@ -1128,13 +1244,13 @@ void UParkController::handleGet(http_request request) {
                             });
 
                             if (requesting_user_category_name == "Admin" || it != std::end(parking_categories_allowed)){
-                                json::value pl_json= json::value::object(true);   // keep_order=true
-                                pl_json["id"] = json::value::number(pl.getId());
-                                pl_json["name"] = json::value::string(pl.getName());
-                                pl_json["street"] = json::value::string(pl.getStreet());
-                                pl_json["num_parking_slots"] = json::value::number(pl.getNumParkingSlots());
+                                json::value b_json= json::value::object(true);   // keep_order=true
+                                b_json["id"] = json::value::number(pl.getId());
+                                b_json["name"] = json::value::string(pl.getName());
+                                b_json["street"] = json::value::string(pl.getStreet());
+                                b_json["num_parking_slots"] = json::value::number(pl.getNumParkingSlots());
 
-                                response[i++]=pl_json;
+                                response[i++]=b_json;
                             }
                         }
 
@@ -1208,7 +1324,6 @@ void UParkController::handleGet(http_request request) {
             });
         }
 //---
-
         // GET parking_lot/{id_parking_lot}/parking_slots
         else if (path[0] == "parking_lots" && path[2] == "parking_slots" && path.size() == 3) {
 
@@ -1259,7 +1374,174 @@ void UParkController::handleGet(http_request request) {
             });
         }
 //---
+        // GET bookings?since=xxxx-xx-xx&until=xxxx-xx-xx&id_user=x&id_parking_lot=x
+        else if (path[0] == "bookings" && path.size() == 1) {
 
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category_name = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+
+                        std::map<utility::string_t, utility::string_t> query = requestQuery(request);
+
+                        std::string bookings_since = query.count("since") == 1 ? query["since"] : "null";
+                        std::string bookings_until = query.count("until") == 1 ? query["until"] : "null";
+                        int bookings_id_user = query.count("id_user") == 1 ? std::stoi(query["id_user"]) : 0;
+                        int bookings_id_parking_lot = query.count("id_parking_lot") == 1 ? std::stoi(query["id_parking_lot"]) : 0;
+
+                        if (requesting_user_category_name != "Admin" && bookings_id_user!=0 && bookings_id_user!=requesting_user.getId()) {
+                            request.reply(status_codes::Unauthorized,"You can't get bookings of another user!");
+                            return;
+                        }
+
+                        std::vector<Booking> bookings = mapperB.Read_all();
+
+                        //response is a list of json object
+                        json::value response;
+                        int i=0;
+
+                        //adding filter to discriminate from admin which can view all the bookings
+                        //and user which can view only his own bookings.
+
+                        for(Booking b : bookings){
+
+                            if (requesting_user_category_name == "Admin" || b.getIdUser() == requesting_user.getId()){
+
+                                // filtering on user_id required
+                                if (bookings_id_user != 0 && b.getIdUser() != bookings_id_user)
+                                    continue;
+
+                                if (bookings_id_parking_lot != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != bookings_id_parking_lot)
+                                    continue;
+
+                                if (bookings_since != "null") {
+                                    struct tm existing_b_start_struct;
+                                    std::istringstream bdts(b.getDateTimeStart());
+                                    bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
+                                    time_t existing_b_start_time = timegm(&existing_b_start_struct);
+
+                                    struct tm filter_b_start_struct;
+                                    std::istringstream f_bdts(bookings_since + " 00:00:00");
+                                    f_bdts >> std::get_time(&filter_b_start_struct, "%Y-%m-%d %T");
+                                    time_t filter_b_start_time = timegm(&filter_b_start_struct);
+
+                                    if (difftime(existing_b_start_time, filter_b_start_time) < 0)
+                                        continue;
+                                }
+
+                                if (bookings_until != "null") {
+                                    struct tm existing_b_start_struct;
+                                    std::istringstream bdts(b.getDateTimeStart());
+                                    bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
+                                    time_t existing_b_start_time = timegm(&existing_b_start_struct);
+
+                                    struct tm filter_b_end_struct;
+                                    std::istringstream f_bdte(bookings_until + " 00:00:00");
+                                    f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
+                                    time_t filter_b_end_time = timegm(&filter_b_end_struct);
+                                    // include entire last day
+                                    filter_b_end_time += (3600 * 24);
+
+                                    if (difftime(existing_b_start_time, filter_b_end_time) >= 0)
+                                        continue;
+                                }
+
+                                json::value b_json= json::value::object(true);   // keep_order=true
+                                b_json["id"] = json::value::number(b.getId());
+                                b_json["datetime_start"] = json::value::string(b.getDateTimeStart());
+                                b_json["datetime_end"] = json::value::string(b.getDateTimeEnd());
+                                b_json["entry_time"] = json::value::string(b.getEntryTime());
+                                b_json["exit_time"] = json::value::string(b.getExitTime());
+
+                                std::stringstream decimal_value;
+                                decimal_value << std::fixed << std::setprecision(2) << b.getAmount();
+                                b_json["amount"] = json::value::string(decimal_value.str());
+
+                                b_json["id_user"] = json::value::number(b.getIdUser());
+                                b_json["id_vehicle"] = json::value::number(b.getIdVehicle());
+                                b_json["id_parking_slot"] = json::value::number(b.getIdParkingSlot());
+                                b_json["note"] = json::value::string(b.getNote());
+
+                                response[i++]=b_json;
+                            }
+                        }
+
+                        request.reply(status_codes::OK, response);
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
+        // GET bookings/{id}
+        else if (path[0] == "bookings" && path.size() == 2) {
+
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                        int requested_booking_id = std::stoi(path[1]);
+
+                        Booking requested_booking = mapperB.Read(requested_booking_id);
+
+                        if (requesting_user.getId() == requested_booking.getIdUser() || requesting_user_category == "Admin"){
+
+                            json::value response = json::value::object(true);
+
+                            response["id"] = json::value::number(requested_booking.getId());
+                            response["datetime_start"] = json::value::string(requested_booking.getDateTimeStart());
+                            response["datetime_end"] = json::value::string(requested_booking.getDateTimeEnd());
+                            response["entry_time"] = json::value::string(requested_booking.getEntryTime());
+                            response["exit_time"] = json::value::string(requested_booking.getExitTime());
+
+                            std::stringstream decimal_value;
+                            decimal_value << std::fixed << std::setprecision(2) << requested_booking.getAmount();
+                            response["amount"] = json::value::string(decimal_value.str());
+
+                            response["id_user"] = json::value::number(requested_booking.getIdUser());
+                            response["id_vehicle"] = json::value::number(requested_booking.getIdVehicle());
+                            response["id_parking_slot"] = json::value::number(requested_booking.getIdParkingSlot());
+                            response["note"] = json::value::string(requested_booking.getNote());
+
+                            request.reply(status_codes::OK, response);
+                        }
+                        else {
+                            request.reply(status_codes::Unauthorized, "You can't get booking of another user!");
+                        }
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+                });
+        }
+//---
         else{
             request.reply(status_codes::NotFound);
         }
@@ -1763,7 +2045,7 @@ void UParkController::handleDelete(http_request request) {
             });
         }
 //---
-        // DELETE hourly_rates/{id}
+        // DELETE users/{id_user}/vehicles/{id_vehicle}
         else if (path[0] == "users" && path[2] == "vehicles" && path.size() == 4){
 
             pplx::create_task(std::bind(userAuthentication, request))
@@ -1864,7 +2146,84 @@ void UParkController::handleDelete(http_request request) {
             });
         }
 //---
+        // DELETE bookings/{id}
+        else if (path[0] == "bookings" && path.size() == 2){
 
+            pplx::create_task(std::bind(userAuthentication, request))
+            .then([=](pplx::task<std::tuple<bool, User>> resultTask)
+            {
+                try {
+                    std::tuple<bool, User> result = resultTask.get();
+
+                    if (std::get<0>(result) == true){
+
+                        User requesting_user=std::get<1>(result);
+                        std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+                        int requested_booking_id = std::stoi(path[1]);
+
+                        Booking booking = mapperB.Read(requested_booking_id);
+
+                        // check on booking ownership
+                        if (requesting_user_category != "Admin" && booking.getIdUser() != requesting_user.getId()) {
+                            request.reply(status_codes::Unauthorized, "You can't delete booking of another user");
+                            return;
+                        }
+
+                        // check if delete request is at least 2 hours before booking start time
+                        time_t current_datetime = time(0);
+                        struct tm now = *gmtime(&current_datetime);
+                        now.tm_sec = 0;
+
+                        struct tm datetime_start_struct;
+                        std::istringstream dts(booking.getDateTimeStart());
+                        dts >> std::get_time(&datetime_start_struct, "%Y-%m-%d %T");
+
+                        double seconds = difftime(timegm(&datetime_start_struct), timegm(&now));
+
+                        if (seconds < (3600*2)) {     // 2 hours
+                            request.reply(status_codes::BadRequest, "Impossible to delete a booking with less than two hours notice!");
+                            return;
+                        }
+
+                        // refund
+                        User booking_user = mapperU.Read(booking.getIdUser());
+                        booking_user.setWallet(booking_user.getWallet() + booking.getAmount());
+                        mapperU.Update(booking_user);
+
+                        // update admin Wallet
+                        std::vector<User> users = mapperU.Read_all();
+                        std::vector<User>::iterator it;
+                        it = std::find_if(std::begin(users), std::end(users), [](const User& u)
+                        {
+                            return (mapperUC.Read(u.getIdUserCategory()).getName() == "Admin");
+                        });
+
+                        if (it != std::end(users)) {
+                            User admin = *it;
+                            admin.setWallet(admin.getWallet() - booking.getAmount());
+                            mapperU.Update(admin);
+                        }
+
+                        // booking deleting
+                        mapperB.Delete(requested_booking_id);
+
+                        std::stringstream decimal_value;
+                        decimal_value << std::fixed << std::setprecision(2) << booking.getAmount();
+                        request.reply(status_codes::OK, "Booking correctly deleted! User has been refunded for " + decimal_value.str());
+                    }
+                    else {
+                        request.reply(status_codes::Unauthorized,"User doesn't exist or credentials are wrong!");
+                    }
+                }
+                catch(DataMapperException & e) {
+                    request.reply(status_codes::InternalError, e.what());
+                }
+                catch(UserException& e) {
+                    request.reply(status_codes::NotFound, e.what());
+                }
+            });
+        }
+//---
         else {
             request.reply(status_codes::NotFound);
         }
