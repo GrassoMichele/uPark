@@ -210,6 +210,8 @@ void post_ns::parking_lot(const web::http::http_request& request, const web::jso
     }
 }
 
+bool booking_time_overlapping_check(const time_t, const time_t, const Booking&);
+
 // POST users/{id_user}/bookings
 void post_ns::users_id_bookings(const web::http::http_request& request, const web::json::value& json_request, const User& authenticated_user){
     User requesting_user=authenticated_user;
@@ -338,36 +340,31 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
 
     it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time](const Booking& b)
     {
-        //existing booking start_time ad end_time from string to time_t
-        struct tm existing_b_start_struct;
-        std::istringstream bdts(b.getDateTimeStart());
-        bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
-        time_t existing_b_start_time = timegm(&existing_b_start_struct);
-
-        struct tm existing_b_end_struct;
-        std::istringstream bdte(b.getDateTimeEnd());
-        bdte >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
-        time_t existing_b_end_time = timegm(&existing_b_end_struct);
-
-        //cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
-        if (difftime((datetime_start_time - (15 * 60)), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
-            return true;
-        }
-        //cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
-        else if (difftime((datetime_end_time + (15 * 60)), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
-            return true;
-        }
-        //cheking if existing booking is overlapping with the requested booking
-        else if (difftime(existing_b_start_time, datetime_start_time) == 0 && difftime(existing_b_end_time, datetime_end_time) == 0){
-            return true;
-        }
-        else{
-            return false;
-        }
+        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, b);
     });
 
     if (it_b != std::end(bookings)){
         request.reply(status_codes::BadRequest, "Booking conflicts with an existing one!");
+        return;
+    }
+
+    // check that the user does not have another reservation on the same park (different park slot) in overlapping time intervals.
+    bookings = mapperB.Read_all();
+
+    //filtering booking for selected parking lot and user
+    bookings.erase(std::remove_if(bookings.begin(), bookings.end(), [requested_user_id, id_parking_lot](const Booking& b)
+        {
+            return (b.getIdUser() != requested_user_id || mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot);
+        }), bookings.end());
+
+
+    it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time](const Booking& b)
+    {
+        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, b);
+    });
+
+    if (it_b != std::end(bookings)){
+        request.reply(status_codes::BadRequest, "User has another reservation on the same parking lot (different park slot) in overlapping time intervals.");
         return;
     }
 
@@ -528,5 +525,36 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
     }
     else {
         request.reply(status_codes::Unauthorized, "You're not processing server!");
+    }
+}
+
+
+// function that checks for booking overlapping temporally
+bool booking_time_overlapping_check(const time_t datetime_start_time, const time_t datetime_end_time, const Booking& b) {
+    //existing booking start_time ad end_time from string to time_t
+    struct tm existing_b_start_struct;
+    std::istringstream bdts(b.getDateTimeStart());
+    bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
+    time_t existing_b_start_time = timegm(&existing_b_start_struct);
+
+    struct tm existing_b_end_struct;
+    std::istringstream bdte(b.getDateTimeEnd());
+    bdte >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
+    time_t existing_b_end_time = timegm(&existing_b_end_struct);
+
+    //cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
+    if (difftime((datetime_start_time - (15 * 60)), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
+        return true;
+    }
+    //cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
+    else if (difftime((datetime_end_time + (15 * 60)), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
+        return true;
+    }
+    //cheking if existing booking is overlapping with the requested booking
+    else if (difftime(existing_b_start_time, datetime_start_time) == 0 && difftime(existing_b_end_time, datetime_end_time) == 0){
+        return true;
+    }
+    else{
+        return false;
     }
 }
