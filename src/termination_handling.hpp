@@ -9,9 +9,9 @@ static std::mutex mutex;
 namespace controller_tools {
 
     void setTerminationHandler() {
-            signal(SIGINT, [](int sig){
-                sync_var.notify_one();
-            });
+        signal(SIGINT, [](int sig){
+            sync_var.notify_one();
+        });
     }
 
     void waitForTermination() {

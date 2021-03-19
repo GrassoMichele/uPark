@@ -47,7 +47,7 @@ int Vehicle::getIdVehicleType() const{
     return id_vehicle_type;
 }
 
-bool operator== ( const Vehicle &v1, const Vehicle &v2)
+bool operator== (const Vehicle &v1, const Vehicle &v2)
 {
     return v1.id == v2.id;
 }

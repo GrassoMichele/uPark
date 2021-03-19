@@ -1,15 +1,14 @@
-#include <iostream>
 #include "parking_slot.hpp"
 
 ParkingSlot::ParkingSlot(){}
 ParkingSlot::ParkingSlot(int id) : id(id) {}
 ParkingSlot::ParkingSlot(int id, int number, int id_parking_lot, int id_vehicle_type, bool reserved_disability):
-                                                                                                                id(id),
-                                                                                                                number(number),
-                                                                                                                id_parking_lot(id_parking_lot),
-                                                                                                                id_vehicle_type(id_vehicle_type),
-                                                                                                                reserved_disability(reserved_disability)
-                                                                                                                {}
+                                                                                id(id),
+                                                                                number(number),
+                                                                                id_parking_lot(id_parking_lot),
+                                                                                id_vehicle_type(id_vehicle_type),
+                                                                                reserved_disability(reserved_disability)
+                                                                                {}
 
 void ParkingSlot::setId(int id){
     this->id = id;
@@ -53,7 +52,7 @@ bool ParkingSlot::getReservedDisability() const{
 }
 
 
-bool operator== ( const ParkingSlot& ps1, const ParkingSlot& ps2)
+bool operator== (const ParkingSlot& ps1, const ParkingSlot& ps2)
 {
     return ps1.id == ps2.id;
 }

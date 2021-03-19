@@ -53,42 +53,40 @@ std::string get_relation_name(T t) {
         return "user_categories";
     }
     else if (std::is_same<T, User>::value){
-      return "users";
+        return "users";
     }
     else if (std::is_same<T, VehicleType>::value){
-      return "vehicle_types";
+        return "vehicle_types";
     }
     else if (std::is_same<T, Vehicle>::value){
-      return "vehicles";
+        return "vehicles";
     }
     else if (std::is_same<T, ParkingLot>::value){
-      return "parking_lots";
+        return "parking_lots";
     }
     else if (std::is_same<T, ParkingCategoriesAllowed>::value){
-      return "parking_lots_user_categories_allowed";
+        return "parking_lots_user_categories_allowed";
     }
     else if (std::is_same<T, ParkingSlot>::value){
-      return "parking_slots";
+        return "parking_slots";
     }
     else if (std::is_same<T, Booking>::value){
-      return "bookings";
+        return "bookings";
     }
-
-
-    //else if (std::is_same<T,>::value) ...
+    else
+        return "null";
 }
 
 class DatabaseException : public std::exception {
-   std::string _message;
-public:
-   DatabaseException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        DatabaseException(const std::string & message);
+        const char * what() const throw();
 };
 
 
 template<class T>
 std::vector<T> Database::select_all(){
-
     T t;
     std::vector<T> db_results;
 
@@ -101,23 +99,19 @@ std::vector<T> Database::select_all(){
 
     if (num_rows!=0){
         while(res->next()){
-
             t = select_instance_object<T>();
-
             db_results.push_back(t);
         }
     }
     else {
         std::cout << "No items in " + relation_name << std::endl;
     }
-
     return db_results;
 }
 
 
 template<class T>
 T Database::select(const int& id){
-
     T t;
     std::string relation_name = get_relation_name(t);
 
@@ -129,9 +123,7 @@ T Database::select(const int& id){
 
     if (num_rows!=0){
         res->next();
-
         t = select_instance_object<T>();
-
         return t;
     }
     else {

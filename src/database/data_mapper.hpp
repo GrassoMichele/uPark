@@ -6,16 +6,13 @@
 #include <algorithm>
 
 #include "data_mapper_interface.hpp"
-
 #include "database.hpp"
-
 
 extern Database db;
 
 template< class T >
 class DataMapper : public DataMapperInterface<T> {
-
-    using DataMapperInterface<T>::cache_unit;         // da controllare
+    using DataMapperInterface<T>::cache_unit;
 
     public:
         DataMapper();
@@ -32,10 +29,12 @@ class DataMapper : public DataMapperInterface<T> {
 
 
 class DataMapperException : public std::exception {
-   std::string _message;
-public:
-   DataMapperException(const std::string & message):_message(message) {}
-   const char * what() const throw() {return _message.c_str();};
+    std::string _message;
+    public:
+        DataMapperException(const std::string & message):_message(message) {}
+        const char * what() const throw() {
+            return _message.c_str();
+        }
 };
 
 
@@ -63,7 +62,6 @@ std::vector<T>& DataMapper<T>::Read_all(){
 
 template<class T>
 T& DataMapper<T>::Read(int id) {
-
     std::string relation_name = get_relation_name(T());
 
     typename std::vector<T>::iterator it;

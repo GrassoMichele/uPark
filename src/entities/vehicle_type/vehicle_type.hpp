@@ -4,6 +4,7 @@
 #include <iostream>
 
 class VehicleType{
+
   private:
     int id;
     std::string name;
@@ -27,10 +28,10 @@ class VehicleType{
 };
 
 class VehicleTypeException : public std::exception {
-   std::string _message;
-public:
-   VehicleTypeException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        VehicleTypeException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

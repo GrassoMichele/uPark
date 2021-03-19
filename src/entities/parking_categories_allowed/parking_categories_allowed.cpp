@@ -1,4 +1,3 @@
-#include <iostream>
 #include "parking_categories_allowed.hpp"
 
 ParkingCategoriesAllowed::ParkingCategoriesAllowed() {}

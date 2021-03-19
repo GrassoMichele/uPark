@@ -1,4 +1,3 @@
-#include <iostream>
 #include "vehicle_type.hpp"
 
 VehicleType::VehicleType(){}
@@ -38,7 +37,7 @@ VehicleType& VehicleType::operator= (const VehicleType& vt1){
 }
 
 
-bool operator== ( const VehicleType& vt1, const VehicleType& vt2)
+bool operator== (const VehicleType& vt1, const VehicleType& vt2)
 {
     return vt1.id == vt2.id;
 }

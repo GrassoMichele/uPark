@@ -32,10 +32,10 @@ class ParkingLot{
 };
 
 class ParkingLotException : public std::exception {
-   std::string _message;
-public:
-   ParkingLotException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        ParkingLotException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

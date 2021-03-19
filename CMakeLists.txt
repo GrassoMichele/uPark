@@ -26,6 +26,10 @@ add_executable(${PROJECT_NAME}        ./src/main.cpp
                                       ./src/entities/parking_slot/parking_slot.cpp
                                       ./src/entities/booking/booking.cpp
                                       ./src/database/database.cpp
+                                      ./src/controller/endpoints_handling/post.cpp
+                                      ./src/controller/endpoints_handling/get.cpp
+                                      ./src/controller/endpoints_handling/put.cpp
+                                      ./src/controller/endpoints_handling/delete.cpp
                                       )
 
 set(CPPRESTSDK_LIBRARY cpprestsdk::cpprest cpprestsdk::cpprestsdk_zlib_internal cpprestsdk::cpprestsdk_boost_internal cpprestsdk::cpprestsdk_openssl_internal)

@@ -26,15 +26,15 @@ class UserCategory{
     std::string getServiceValidityStart() const;
     std::string getServiceValidityEnd() const;
 
-    friend bool operator== ( const UserCategory&, const UserCategory&);
+    friend bool operator== (const UserCategory&, const UserCategory&);
     friend std::ostream& operator<<(std::ostream& os, const UserCategory&);
 };
 
 class UserCategoryException : public std::exception {
-   std::string _message;
-public:
-   UserCategoryException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        UserCategoryException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

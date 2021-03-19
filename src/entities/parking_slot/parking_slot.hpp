@@ -28,16 +28,15 @@ class ParkingSlot{
     int getIdVehicleType() const;
     bool getReservedDisability() const;
 
-
-    friend bool operator== ( const ParkingSlot&, const ParkingSlot&);
+    friend bool operator== (const ParkingSlot&, const ParkingSlot&);
     friend std::ostream& operator<<(std::ostream& os, const ParkingSlot&);
 };
 
 class ParkingSlotException : public std::exception {
-   std::string _message;
-public:
-   ParkingSlotException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        ParkingSlotException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

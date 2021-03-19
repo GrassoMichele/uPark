@@ -30,6 +30,7 @@ void UserCategory::setServiceValidityEnd(std::string service_validity_end){
     this->service_validity_end = service_validity_end;
 }
 
+
 int UserCategory::getId() const{
     return id;
 }
@@ -50,7 +51,8 @@ std::string UserCategory::getServiceValidityEnd() const{
     return service_validity_end;
 }
 
-bool operator== ( const UserCategory &uc1, const UserCategory &uc2)
+
+bool operator== (const UserCategory &uc1, const UserCategory &uc2)
 {
     return uc1.id == uc2.id;
 }

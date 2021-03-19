@@ -1,4 +1,3 @@
-#include <iostream>
 #include "parking_lot.hpp"
 
 ParkingLot::ParkingLot(){}
@@ -47,7 +46,7 @@ ParkingLot& ParkingLot::operator= (const ParkingLot& p1){
 }
 
 
-bool operator== ( const ParkingLot& p1, const ParkingLot& p2)
+bool operator== (const ParkingLot& p1, const ParkingLot& p2)
 {
     return p1.id == p2.id;
 }

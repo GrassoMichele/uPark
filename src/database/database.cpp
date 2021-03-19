@@ -1,5 +1,4 @@
 #include "database.hpp"
-#include <type_traits>
 
 Database::Database(){
     driver = get_driver_instance();
@@ -7,7 +6,6 @@ Database::Database(){
         connection.reset(driver->connect("tcp://upark-server-db.mysql.database.azure.com", "rest_server@upark-server-db", "upark_pwd"));
         std::cout << "--- Connection to DB established! ---" << std::endl;
         db_init();
-        //connection->setSchema("db_upark");
     }
     catch(sql::SQLException& e){
         std::cout << e.what() << std::endl;
@@ -32,7 +30,6 @@ void Database::db_init(){
 
         connection->setSchema("db_upark");
 
-
         while(res->next()){
           std::cout << "New Category found: " <<  res->getString("name")  << std::endl;
 
@@ -48,17 +45,14 @@ void Database::db_init(){
           }
         }
         std::cout << "--- upark_db is updated! ---" << std::endl;
-
     }
     catch(sql::SQLException& e){
         std::cout << e.what() << std::endl;
         throw DatabaseException("Alignment Failed!");
     }
-
 }
 
-//
-// SELECT
+// ---SELECT---
 template<>
 HourlyRate Database::select_instance_object<HourlyRate>(){
     return HourlyRate(res->getInt("id"), res->getDouble("amount"));
@@ -66,20 +60,15 @@ HourlyRate Database::select_instance_object<HourlyRate>(){
 
 template<>
 UserCategory Database::select_instance_object<UserCategory>(){
-    return UserCategory(res->getInt("id"), res->getString("name"), res->getInt("id_hourly_rate"), res->getString("service_validity_start"), res->getString("service_validity_end"));
+    return UserCategory(res->getInt("id"), res->getString("name"), res->getInt("id_hourly_rate"), res->getString("service_validity_start"),
+        res->getString("service_validity_end"));
 }
 
 template<>
 User Database::select_instance_object<User>(){
     return User(res->getInt("id"), res->getString("email"), res->getString("name"), res->getString("surname"),  res->getString("password"),
-              res->getDouble("wallet"), res->getBoolean("disability"), res->getBoolean("active_account"),  res->getInt("id_user_category"));
+        res->getDouble("wallet"), res->getBoolean("disability"), res->getBoolean("active_account"),  res->getInt("id_user_category"));
 }
-
-// template<>
-// User Database::select_instance_object<User>(){
-//     return User(res->getInt("id"), res->getString("email"), res->getString("name"), res->getString("surname"),  res->getString("password"),
-//               res->getDouble("wallet"), res->getBoolean("disability"), res->getBoolean("active_account"),  res->getInt("id_user_category"), std::vector<int>());
-// }
 
 template<>
 VehicleType Database::select_instance_object<VehicleType>(){
@@ -89,7 +78,7 @@ VehicleType Database::select_instance_object<VehicleType>(){
 template<>
 Vehicle Database::select_instance_object<Vehicle>(){
     return Vehicle(res->getInt("id"), res->getString("license_plate"), res->getString("brand"), res->getString("model"),
-                   res->getInt("id_user"), res->getInt("id_vehicle_type"));
+        res->getInt("id_user"), res->getInt("id_vehicle_type"));
 }
 
 template<>
@@ -110,11 +99,11 @@ ParkingSlot Database::select_instance_object<ParkingSlot>(){
 template<>
 Booking Database::select_instance_object<Booking>(){
     return Booking(res->getInt("id"), res->getString("datetime_start"), res->getString("datetime_end"), res->getString("entry_time"),
-                    res->getString("exit_time"), res->getDouble("amount"), res->getInt("id_user"), res->getInt("id_vehicle"),
-                    res->getInt("id_parking_slot"), res->getString("note"));
+        res->getString("exit_time"), res->getDouble("amount"), res->getInt("id_user"), res->getInt("id_vehicle"),
+        res->getInt("id_parking_slot"), res->getString("note"));
 }
 
-
+//---user_existence_check---
 
 bool Database::user_existence_check(const User& u, const std::string& upark_code, const std::string& category_name){
     try {
@@ -145,8 +134,7 @@ bool Database::user_existence_check(const User& u, const std::string& upark_code
 }
 
 
-//
-// INSERT
+//---INSERT---
 template<>
 void Database::insert_query(const HourlyRate& t){
     pstmt.reset(connection->prepareStatement("INSERT INTO " + get_relation_name(t) + " (amount) VALUES (?)"));
@@ -228,8 +216,6 @@ void Database::insert_query(const Booking& t){
     " id_user, id_vehicle, id_parking_slot, note) VALUES (?, ?, ?, ?, ?, ?, ?)"));
     pstmt->setString(1, t.getDateTimeStart());
     pstmt->setString(2, t.getDateTimeEnd());
-    // pstmt->setString(3, t.getEntryTime());
-    // pstmt->setString(4, t.getExitTime());
     pstmt->setDouble(3, t.getAmount());
     pstmt->setInt(4, t.getIdUser());
     pstmt->setInt(5, t.getIdVehicle());
@@ -238,8 +224,7 @@ void Database::insert_query(const Booking& t){
 }
 
 
-//
-//UPDATE
+//---UPDATE---
 template<>
 void Database::update_query(const HourlyRate& t){
     pstmt.reset(connection->prepareStatement("UPDATE " + get_relation_name(t) + " SET amount= ? WHERE id = ?"));

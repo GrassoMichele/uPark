@@ -39,15 +39,15 @@ class Booking{
     int getIdParkingSlot() const;
     std::string getNote() const;
 
-    friend bool operator== ( const Booking&, const Booking&);
+    friend bool operator== (const Booking&, const Booking&);
     friend std::ostream& operator<<(std::ostream& os, const Booking&);
 };
 
 class BookingException : public std::exception {
-   std::string _message;
-public:
-   BookingException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        BookingException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

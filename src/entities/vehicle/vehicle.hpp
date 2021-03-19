@@ -2,10 +2,10 @@
 #define VEHICLE
 
 #include <iostream>
-#include "../vehicle_type/vehicle_type.hpp"
-#include "../user/user.hpp"
+
 
 class Vehicle{
+
   private:
     int id;
     std::string license_plate;
@@ -30,15 +30,15 @@ class Vehicle{
     int getIdUser() const;
     int getIdVehicleType() const;
 
-    friend bool operator== ( const Vehicle&, const Vehicle&);
+    friend bool operator== (const Vehicle&, const Vehicle&);
     friend std::ostream& operator<<(std::ostream& os, const Vehicle&);
 };
 
 class VehicleException : public std::exception {
-   std::string _message;
-public:
-   VehicleException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        VehicleException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

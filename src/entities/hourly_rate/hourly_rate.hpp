@@ -20,15 +20,15 @@ class HourlyRate{
 
     HourlyRate& operator= (const HourlyRate&);
 
-    friend bool operator== ( const HourlyRate&, const HourlyRate&);
+    friend bool operator== (const HourlyRate&, const HourlyRate&);
     friend std::ostream& operator<<(std::ostream& os, const HourlyRate&);
 };
 
 class HourlyRateException : public std::exception {
-   std::string _message;
-public:
-   HourlyRateException(const std::string & message);
-   const char * what() const throw();
+    std::string _message;
+    public:
+        HourlyRateException(const std::string & message);
+        const char * what() const throw();
 };
 
 #endif

@@ -1,11 +1,7 @@
-// foundation/
 #include "basic_controller.hpp"
 
 namespace controller_tools {
     BasicController::BasicController() {
-    }
-
-    BasicController::~BasicController() {
     }
 
     void BasicController::setBaseEndpoint(const std::string & value) {
@@ -14,9 +10,9 @@ namespace controller_tools {
       server_config.set_ssl_context_callback(
       [&](boost::asio::ssl::context& ctx)
       {
-        ctx.set_options(boost::asio::ssl::context::default_workarounds);
-        ctx.use_certificate_file("../utility/upark_server.crt", boost::asio::ssl::context::pem);    // call relative path (main.cpp)
-        ctx.use_private_key_file("../utility/upark_server.key", boost::asio::ssl::context::pem);
+          ctx.set_options(boost::asio::ssl::context::default_workarounds);
+          ctx.use_certificate_file("../utility/upark_server.crt", boost::asio::ssl::context::pem);    // call relative path (main.cpp)
+          ctx.use_private_key_file("../utility/upark_server.key", boost::asio::ssl::context::pem);
       });
 
       listener = http_listener(value, server_config);

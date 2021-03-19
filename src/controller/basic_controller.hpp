@@ -19,7 +19,6 @@ namespace controller_tools {
 
     public:
         BasicController();
-        virtual ~BasicController();
 
         void setBaseEndpoint(const std::string & value);
         std::string getBaseEndpoint() const;

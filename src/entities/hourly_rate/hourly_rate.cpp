@@ -1,4 +1,3 @@
-#include <iostream>
 #include "hourly_rate.hpp"
 
 HourlyRate::HourlyRate(){}
@@ -31,7 +30,7 @@ HourlyRate& HourlyRate::operator= (const HourlyRate& h1){
 }
 
 
-bool operator== ( const HourlyRate& h1, const HourlyRate& h2)
+bool operator== (const HourlyRate& h1, const HourlyRate& h2)
 {
     return h1.id == h2.id;
 }

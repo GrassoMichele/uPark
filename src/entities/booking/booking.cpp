@@ -78,7 +78,7 @@ std::string Booking::getNote() const {
 }
 
 
-bool operator== ( const Booking &b1, const Booking &b2)
+bool operator== (const Booking &b1, const Booking &b2)
 {
     return b1.id == b2.id;
 }
