@@ -1,0 +1,26 @@
+[
+    {
+      "ip":"127.0.0.1",
+      "port":"50052",
+      "crossing_type": "entry",
+      "id_parking_lot": 1
+    },
+    {
+      "ip":"127.0.0.1",
+      "port":"50053",
+      "crossing_type": "exit",
+      "id_parking_lot": 1
+    },
+    {
+      "ip":"127.0.0.1",
+      "port":"50054",
+      "crossing_type": "entry",
+      "id_parking_lot": 2
+    },
+    {
+      "ip":"127.0.0.1",
+      "port":"50055",
+      "crossing_type": "exit",
+      "id_parking_lot": 2
+    }
+]
