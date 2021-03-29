@@ -5,6 +5,7 @@
 #include <sstream>
 #include <thread>
 #include <csignal>
+#include <filesystem>
 
 #include <cpprest/json.h>
 #include <cpprest/http_client.h>
@@ -75,7 +76,7 @@ void receive_image(const int connection_socket, http_client& client, const struc
     });
 
     if (it == std::end(clients)) {
-        std::cout << "Client not recognized. Closing socket connection..." << std::endl;
+        std::cout << "Client not recognized: closing socket connection..." << std::endl;
         return;
     }
 
@@ -85,6 +86,7 @@ void receive_image(const int connection_socket, http_client& client, const struc
     image_name = std::to_string(it->at("id_parking_lot").as_number().to_int64()) + "_" + it->at("crossing_type").as_string();
 
     while (!server_termination) {
+        total_received_size = 0;
 
         // Get image_size of the image
         do {
@@ -188,7 +190,7 @@ void receive_image(const int connection_socket, http_client& client, const struc
                     bool open = make_request(client, json_body);
 
                     do {
-                        write_size = write(connection_socket, open?"true":"false", 10);
+                        write_size = write(connection_socket, open?"1":"0", 2);
                     }
                     while(write_size == -1);
                 }
@@ -231,43 +233,31 @@ void read_json_clients(std::vector<json::object>& clients, std::string path) {
 }
 
 
-void termination_handling(int sig) {
-    std::cout << std::endl << "Server is shutting down ..." << std::endl;
-    server_termination = true;
-    close(socket_fd);
+http_client_config load_certification_authority(){
+  http_client_config client_config;
+
+  client_config.set_ssl_context_callback(
+  [&](boost::asio::ssl::context &ctx)
+  {
+      ctx.load_verify_file("../utility/upark_server.crt");
+  });
+
+  return client_config;
 }
 
-
-int main(int argc, const char *argv[])
-{
-    int conn_socket_fd;
-    struct sockaddr_in server_address, client_address;
-    socklen_t client_address_len;
-
-    signal(SIGINT, termination_handling);
-
-    // https config
-    http_client_config client_config;
-
-    client_config.set_ssl_context_callback(
-    [&](boost::asio::ssl::context &ctx)
-    {
-        ctx.load_verify_file("../utility/upark_server.crt");
-    });
-
-    http_client client("https://localhost:50050/apis/", client_config);
-
-
-    // read json configuration file
-    std::vector<json::object> clients;
-    read_json_clients(clients, "../utility/clients.json");
-
-
+void socket_initialization(struct sockaddr_in& server_address){
     // 1. Socket creation
     // socket(int domain, int type, int protocol)
     socket_fd =  socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
         std::cout << "Error on socket opening!" << std::endl;
+        exit(1);
+    }
+
+    // setting socket options
+    int enable = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) == -1){
+        std::cout << "Error: impossibile to set socket option 'SO_REUSEADDR'" << std::endl;
         exit(1);
     }
 
@@ -289,8 +279,46 @@ int main(int argc, const char *argv[])
 
     std::cout << "Server is listening on address: " << inet_ntoa(server_address.sin_addr) << ":"
           << ntohs(server_address.sin_port) << std::endl;
+}
 
-    // 4. Socket accepts connections
+
+void termination_handling(int sig) {
+    std::cout << std::endl << "Server is shutting down ..." << std::endl;
+    server_termination = true;
+    close(socket_fd);
+}
+
+void server_shutdown(std::vector<std::tuple<std::thread, int>>& sockets_opened){
+    std::cout << "Waiting for threads to finish..." << std::endl;
+    for (std::tuple<std::thread, int>& socket : sockets_opened) {
+        shutdown(std::get<1>(socket), SHUT_RDWR);
+        std::get<0>(socket).join();
+    }
+
+    std::cout << "Bye!" << std::endl;
+}
+
+int main(int argc, const char *argv[])
+{
+    int conn_socket_fd;
+    struct sockaddr_in server_address, client_address;
+    socklen_t client_address_len;
+
+    signal(SIGINT, termination_handling);
+
+    //https config
+    http_client client("https://localhost:50050/apis/", load_certification_authority());
+
+    // read json configuration file
+    std::vector<json::object> clients;
+    read_json_clients(clients, "../utility/clients.json");
+
+    // creation of ./plates folder if doesn't exist
+    std::filesystem::create_directory("../plates");
+
+    socket_initialization(server_address);
+
+    // Socket accepts connections
     std::vector<std::tuple<std::thread, int>> sockets_opened;
 
     client_address_len = sizeof(client_address);
@@ -309,14 +337,8 @@ int main(int argc, const char *argv[])
         );
     }
 
-    //wait for threads termination
-    std::cout << "Waiting for threads to finish..." << std::endl;
-    for (std::tuple<std::thread, int>& socket : sockets_opened) {
-        shutdown(std::get<1>(socket), SHUT_RDWR);
-        std::get<0>(socket).join();
-    }
+    //wait threads termination
+    server_shutdown(sockets_opened);
 
-    close(socket_fd);
-    std::cout << "Bye!" << std::endl;
     return 0;
 }
