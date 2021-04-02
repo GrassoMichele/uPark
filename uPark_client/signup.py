@@ -1,22 +1,31 @@
 #! /usr/bin/python3
-
 from PyQt5.QtWidgets import QWidget, QFormLayout, QHBoxLayout, QVBoxLayout, \
-                            QLineEdit, QComboBox, QMessageBox, QLabel, QPushButton
+                            QLineEdit, QComboBox, QMessageBox, QLabel, QPushButton, \
+                            QDesktopWidget
 
 from PyQt5.QtGui import QIcon
 
+from PyQt5.QtCore import pyqtSignal, QObject
+
 import requests
-from urllib3.exceptions import HTTPError
+
+from server_apis import get_user_categories
+
+# signal used to delete the signup instance from home class in case of exceptions (e.g. server down )
+class SignUp_signals(QObject):
+    close = pyqtSignal()
 
 class SignUp(QWidget):
     def __init__(self):
         super().__init__()
-        self.initUI()
+        self.init_ui()
 
-    def initUI(self):
+    def init_ui(self):
 
-        self.http_session = requests.Session()
-        self.http_session.verify = "utility/upark_server.crt"
+        self.signals = SignUp_signals()
+
+        self.https_session = requests.Session()
+        self.https_session.verify = "utility/upark_server.crt"
 
         formLayout = QFormLayout()
         vbox = QVBoxLayout()
@@ -31,10 +40,11 @@ class SignUp(QWidget):
         self.password_le.setEchoMode(QLineEdit.Password)
 
         self.password_eye_btn = QPushButton(QIcon("utility/pictures/eye.svg"),"")
-        self.password_eye_btn.clicked.connect(self.showPassword)
+        self.password_eye_btn.clicked.connect(self.show_password)
 
         hbox.addWidget(self.password_le)
         hbox.addWidget(self.password_eye_btn)
+
 
         self.signup_btn = QPushButton("Sign-up!")
         self.signup_btn.clicked.connect(self.signup_submit)
@@ -43,6 +53,7 @@ class SignUp(QWidget):
 
         # get categories
         self.load_user_categories()
+
 
         self.upark_code_le = QLineEdit()
 
@@ -61,6 +72,7 @@ class SignUp(QWidget):
 
         self.setFixedSize(500,300)
         self.setWindowTitle('Signup')
+        self.move(QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
 
 
     def hideEvent(self, event):
@@ -73,7 +85,7 @@ class SignUp(QWidget):
         self.upark_code_le.clear()
 
 
-    def showPassword(self):
+    def show_password(self):
         if self.password_le.echoMode() == QLineEdit.Password:
             self.password_le.setEchoMode(QLineEdit.Normal)
             self.password_eye_btn.setIcon(QIcon("utility/pictures/closed_eye.svg"))
@@ -83,20 +95,17 @@ class SignUp(QWidget):
 
 
     def load_user_categories(self):
-        #https://localhost:50050/apis/user_categories
-        try:
-            response = self.http_session.get("https://localhost:50050/apis/user_categories")
-            # If the response was successful, no Exception will be raised
-            response.raise_for_status()
-        except HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
-        except Exception as err:
-            QMessageBox.critical(None, "Alert", "Server error. Retry later.")           # parent = None to display QMessageBox centered
-            raise Exception("Error")
-            #print(f"Other error occurred: {err}")
-        else:
-            self.user_categories = response.json()         # http response body as json
-            self.user_category_cmb.addItems([user_category["name"] for user_category in self.user_categories if user_category["name"]!="Admin"])
+            results = get_user_categories(self.https_session)
+            self.user_categories = results[0]
+
+            if self.user_categories is None:                         # something went wrong with https request
+                message =  results[1]                                # message is a tuple
+                print(f"HTTP error occurred: {message[0]}")
+                QMessageBox.critical(None, "Alert", message[1])
+                raise Exception("Http Error")
+
+            else:
+                self.user_category_cmb.addItems([user_category["name"] for user_category in self.user_categories if user_category["name"] != "Admin"])
 
 
     def signup_submit(self):
@@ -113,12 +122,15 @@ class SignUp(QWidget):
                     }
 
         try:
-            response = self.http_session.post('https://localhost:50050/apis/users/signup', json = user_dict)
+            response = self.https_session.post('https://localhost:50050/apis/users/signup', json = user_dict)
             response.raise_for_status()
-        except HTTPError as http_err:
-            QMessageBox.critical(self, "Sign-up response", response.text)
-        except Exception as err:
-            QMessageBox.critical(self, "Sign-up response", str(err))
+
+        except (requests.exceptions.HTTPError, Exception) as err:
+            message = response.text if isinstance(err, requests.exceptions.HTTPError) else str(err)
+            QMessageBox.critical(self, "Sign-up response", message)
+            self.signals.close.emit()
+
         else:
-            response_json = response.json()         # http response body as json
+            response_json = response.json()         # https response body as json
             QMessageBox.about(self, "Sign-up response", response_json["message"])
+            self.signals.close.emit()

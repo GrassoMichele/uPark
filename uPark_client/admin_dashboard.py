@@ -6,19 +6,19 @@ from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QFont
 
 import sys
+from urllib3.exceptions import HTTPError
 
-from signup import SignUp
-from login import Login
 
-class Home(QMainWindow):
+class adminDashboard(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, user):
         super().__init__()
-        self.init_ui()
+        self.user = user
+        self.initUI()
 
-    def init_ui(self):
+    def initUI(self):
         self.setObjectName("MainWindow")
-        self.setStyleSheet("#MainWindow { border-image: url(utility/pictures/home.jpg) 0 0 0 0 stretch stretch; }")
+        #self.setStyleSheet("#MainWindow { border-image: url(utility/pictures/home.jpg) 0 0 0 0 stretch stretch; }")
 
         self.signup = None
         self.login = None
@@ -29,7 +29,7 @@ class Home(QMainWindow):
 
         vbox.addStretch()
 
-        app_name = QLabel("uPark")
+        app_name = QLabel("ADMIN DASHBOARD")  #si
         app_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         app_name.setFont(QFont("Arial", 40))
         app_name.setStyleSheet("color: black; ")
@@ -41,10 +41,10 @@ class Home(QMainWindow):
         hbox = QHBoxLayout()
 
         signup_btn = QPushButton("Sign-up")
-        signup_btn.clicked.connect(self.show_signup)
+        signup_btn.clicked.connect(self.showSignup)
 
         login_btn = QPushButton("Login")
-        login_btn.clicked.connect(self.show_login)
+        login_btn.clicked.connect(self.showLogin)
 
         hbox.addStretch()
         hbox.addWidget(signup_btn)
@@ -60,45 +60,38 @@ class Home(QMainWindow):
 
         self.setCentralWidget(self.widget)
 
-        self.setWindowTitle('Home')
+        self.setWindowTitle('Dashboard')   #si
         self.full_screen()
         self.show()
-
-    def set_signup_close(self):
-        self.signup.close()
 
     def full_screen(self):
         desktop_resolution = QDesktopWidget().availableGeometry()
         self.setGeometry(desktop_resolution)
 
-    def show_signup(self):
+    def showSignup(self):
         if self.signup is None:
             try:
                 self.signup = SignUp()
-                self.signup.signals.close.connect(self.set_signup_close)
             except Exception:
                 self.signup = None
-
+                self.close()
         if self.signup is not None:
             self.signup.show()
 
-    def show_login(self):
+    def showLogin(self):
         if self.login is None:
             try:
                 self.login = Login()
-                self.login.signals.close.connect(self.login.close)
             except Exception:
                 self.login = None
-
-
+                self.close()
         if self.login is not None:
             self.login.show()
-            self.login.signals.home_close.connect(self.close)
 
 
 def main():
     app = QApplication(sys.argv)
-    ex = Home()
+    ex = adminDashboard()
 
     sys.exit(app.exec_())
 
