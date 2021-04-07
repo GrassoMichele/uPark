@@ -12,7 +12,7 @@ class HourlyRate{
     HourlyRate();
     HourlyRate(int id);
     HourlyRate(int id, float amount);
-    ~HourlyRate();
+
     void setId(int);
     void setAmount(float);
     int getId() const;

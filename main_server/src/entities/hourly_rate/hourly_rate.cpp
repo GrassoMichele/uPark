@@ -4,8 +4,6 @@ HourlyRate::HourlyRate(){}
 HourlyRate::HourlyRate(int id) : id(id) {}
 HourlyRate::HourlyRate(int id, float amount): id(id), amount(amount) {}
 
-HourlyRate::~HourlyRate(){}
-
 
 void HourlyRate::setId(int id){
     this->id = id;

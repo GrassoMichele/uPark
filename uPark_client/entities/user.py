@@ -1,5 +1,5 @@
 class User:
-    def __init__(self, id, email, name, surname, password, wallet = 0.00, disability = False, active_account = False, id_user_category = 2):    # id_user_category = 2 -> Student
+    def __init__(self, id = None, email = None, name = None, surname = None, password = None, wallet = 0.00, disability = False, active_account = False, id_user_category = 2):    # id_user_category = 2 -> Student
         self._id = id
         self._email = email
         self._name = name
@@ -66,8 +66,13 @@ class User:
     def get_id_user_category(self):
         return self._id_user_category
 
+    def __eq__(self, other):
+        if isinstance(other, User):
+            return self._id == other._id
+        return NotImplemented
+
     def __str__(self):
-        user_info = (f"User Id: {self._id}, email: {self._email}, name: {self._name}, surname: {self._surname}, "        
+        user_info = (f"User Id: {self._id}, email: {self._email}, name: {self._name}, surname: {self._surname}, "
         f"password: {self._password}, wallet: {self._wallet}, disability: {self._disability}, active accont: {self._active_account}, "
         f"id_user_category: {self._id_user_category}")
         return user_info

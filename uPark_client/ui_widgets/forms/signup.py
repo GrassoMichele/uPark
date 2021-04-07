@@ -5,11 +5,12 @@ from PyQt5.QtWidgets import QWidget, QFormLayout, QHBoxLayout, QVBoxLayout, \
 
 from PyQt5.QtGui import QIcon
 
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
-import requests
+import requests, time
 
-from convenience_functions.server_apis import get_user_categories
+from convenience_functions.server_apis import make_http_request
+from entities.user_category import UserCategory
 
 # signal used to delete the signup instance from home class in case of exceptions (e.g. server down )
 class SignUp_signals(QObject):
@@ -21,7 +22,6 @@ class SignUp(QWidget):
         self.init_ui()
 
     def init_ui(self):
-
         self.signals = SignUp_signals()
 
         self.https_session = requests.Session()
@@ -45,15 +45,10 @@ class SignUp(QWidget):
         hbox.addWidget(self.password_le)
         hbox.addWidget(self.password_eye_btn)
 
-
-        self.signup_btn = QPushButton("Sign-up!")
+        self.signup_btn = QPushButton("Sign-Up")
         self.signup_btn.clicked.connect(self.signup_submit)
 
         self.user_category_cmb = QComboBox()
-
-        # get categories
-        self.load_user_categories()
-
 
         self.upark_code_le = QLineEdit()
 
@@ -95,29 +90,38 @@ class SignUp(QWidget):
 
 
     def load_user_categories(self):
-            results = get_user_categories(self.https_session)
-            self.user_categories = results[0]
+            response = make_http_request(self.https_session, "get", "user_categories", show_messagebox = False)
 
-            if self.user_categories is None:                         # something went wrong with https request
-                message =  results[1]                                # message is a tuple
-                print(f"HTTP error occurred: {message[0]}")
-                QMessageBox.critical(None, "Alert", message[1])
-                raise Exception("Http Error")
+            if response:
+                self.user_categories = [UserCategory(**user_category) for user_category in response.json() if user_category["name"] != "Admin"]
+                self.user_category_cmb.clear()
+                self.user_category_cmb.addItems([user_category.get_name() for user_category in self.user_categories])
 
             else:
-                self.user_category_cmb.addItems([user_category["name"] for user_category in self.user_categories if user_category["name"] != "Admin"])
+                QMessageBox.critical(None, "Alert", "Server error. Retry later.")
+                raise Exception("Http Error")
+
+
+    def showEvent(self, event):
+        try:
+            self.load_user_categories()
+        except Exception:
+            QTimer.singleShot(10,self.hide)   # after 10 milliseconds hide the signup QtWidget
 
 
     def signup_submit(self):
         # searching for selected user_category info
-        category_dict = list(filter(lambda x: x["name"]==self.user_category_cmb.currentText(), self.user_categories))[0]
+        user_category_selected = self.user_categories[self.user_category_cmb.currentIndex()]
+
+        print(user_category_selected)
+
 
         user_dict = {
                     "email": self.email_le.text(),
                     "name": self.name_le.text(),
                     "surname": self.surname_le.text(),
                     "password": self.password_le.text(),
-                    "id_user_category": category_dict["id"],
+                    "id_user_category": user_category_selected.get_id(),
                     "upark_code": self.upark_code_le.text()
                     }
 

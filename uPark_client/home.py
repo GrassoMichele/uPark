@@ -1,9 +1,9 @@
 #! /usr/bin/python3
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QDesktopWidget, \
-                             QLabel, QApplication, QMainWindow, QPushButton
+                             QLabel, QApplication, QMainWindow, QPushButton, QFrame
 
 from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPixmap
 
 import sys
 
@@ -30,9 +30,8 @@ class Home(QMainWindow):
         vbox.addStretch()
 
         app_name = QLabel("uPark")
+        app_name.setPixmap(QPixmap("utility/pictures/uPark_logo.svg"))
         app_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        app_name.setFont(QFont("Arial", 40))
-        app_name.setStyleSheet("color: black; ")
 
         vbox.addWidget(app_name)
 
@@ -41,9 +40,13 @@ class Home(QMainWindow):
         hbox = QHBoxLayout()
 
         signup_btn = QPushButton("Sign-up")
+        signup_btn.setFont(QFont("Ubuntu", 20))
+        signup_btn.setStyleSheet("background-color : #3D3C3C; color : #FFFFFF; padding : 23px;")
         signup_btn.clicked.connect(self.show_signup)
 
         login_btn = QPushButton("Login")
+        login_btn.setStyleSheet("background-color : #3D3C3C; color : #FFFFFF; padding : 23px;")
+        login_btn.setFont(QFont("Ubuntu", 20))
         login_btn.clicked.connect(self.show_login)
 
         hbox.addStretch()
@@ -60,7 +63,7 @@ class Home(QMainWindow):
 
         self.setCentralWidget(self.widget)
 
-        self.setWindowTitle('Home')
+        self.setWindowTitle('uPark | Home')
         self.full_screen()
         self.show()
 
@@ -75,12 +78,14 @@ class Home(QMainWindow):
         if self.signup is None:
             try:
                 self.signup = SignUp()
+                #self.signup.setParent()
                 self.signup.signals.close.connect(self.set_signup_close)
             except Exception:
                 self.signup = None
 
         if self.signup is not None:
             self.signup.show()
+
 
     def show_login(self):
         if self.login is None:

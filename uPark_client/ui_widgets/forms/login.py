@@ -10,7 +10,8 @@ from PyQt5.QtCore import pyqtSignal, QObject
 import requests
 
 from entities.user import User
-from convenience_functions.server_apis import get_user_categories
+from entities.user_category import UserCategory
+from convenience_functions.server_apis import make_http_request
 from ui_widgets.user.user_dashboard import userDashboard
 from ui_widgets.admin.admin_dashboard import adminDashboard
 
@@ -82,45 +83,42 @@ class Login(QWidget):
 
     def login_submit(self):
 
-        auth_info = (self.email_le.text(), self.password_le.text())
+        self.https_session.auth = (self.email_le.text(), self.password_le.text())
 
-        try:
-            response = requests.get('https://localhost:50050/apis/login', verify = "utility/upark_server.crt", auth = auth_info)
-            response.raise_for_status()
+        response = make_http_request(self.https_session, "get", "login")
 
-        except (requests.exceptions.HTTPError, Exception) as err:
-            message = response.text if isinstance(err, requests.exceptions.HTTPError) else str(err)
-            QMessageBox.critical(self, "Login response", message)
-
-        else:
-            response_json = response.json()         # https response body as json
+        if response:
+            response_json = response.json()                   # https response body as json
             QMessageBox.about(self, "Login response", response_json["message"])
 
             del response_json["message"]                      # call del to make the response_json matches with User constructor
             user = User(**response_json)                      # dictionary unpacking
 
-            print(user)
-            # user = User(response_json["id"], response_json["email"], response_json["name"],
-            # response_json["surname"], response_json["password"], response_json["wallet"], response_json["disability"],
-            # response_json["active_account"], response_json["id_user_category"])
+            #print(user)
 
-            results = get_user_categories(self.https_session)
-            user_categories = results[0]
+            response_user_categories = make_http_request(self.https_session, "get", "user_categories", show_messagebox = False)
 
-            if user_categories is None:                         # something went wrong with https request
-                message = results[1]                            # message is a tuple
-                print(f"HTTP error occurred: {message[0]}")
-                QMessageBox.critical(None, "Alert", message[1])
-                self.signals.close.emit()
+            if response_user_categories:
+                user_categories = [UserCategory(**user_category) for user_category in response_user_categories.json()]
+
+                try:
+                    admin_list_index = user_categories.index(UserCategory(name = "Admin"))
+                    admin_id = user_categories[admin_list_index].get_id()
+
+                    if user.get_id_user_category() == admin_id:
+                        self.admin_dashboard = adminDashboard(user)
+                    else:
+                        self.user_dashboard = userDashboard(user)
+
+                except ValueError:
+                    print("Error: No admin found in user_categories. Some problem occured in DB uPark!")
+
+                finally:
+                    self.signals.home_close.emit()
 
             else:
-                id_admin = list(filter(lambda x: x["name"] == "Admin", user_categories))[0]["id"]
+                QMessageBox.critical(None, "Alert", "Server error. Retry later.")
+                #self.signals.close.emit()
 
-                if user.get_id_user_category() == id_admin:
-                    self.admin_dashboard = adminDashboard(user)      #aggiungere la sessione
-                else:
-                    self.user_dashboard = userDashboard(user)
 
-                self.signals.home_close.emit()
-        finally:
-            self.signals.close.emit()
+        self.signals.close.emit()
