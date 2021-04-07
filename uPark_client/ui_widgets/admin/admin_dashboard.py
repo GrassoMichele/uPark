@@ -6,10 +6,9 @@ from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QFont
 
 import sys
-from urllib3.exceptions import HTTPError
 
 
-class userDashboard(QMainWindow):
+class adminDashboard(QMainWindow):
 
     def __init__(self, user):
         super().__init__()
@@ -29,7 +28,7 @@ class userDashboard(QMainWindow):
 
         vbox.addStretch()
 
-        app_name = QLabel("USER DASHBOARD")  #si
+        app_name = QLabel("ADMIN DASHBOARD")  #si
         app_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         app_name.setFont(QFont("Arial", 40))
         app_name.setStyleSheet("color: black; ")
@@ -91,7 +90,7 @@ class userDashboard(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    ex = userDashboard()
+    ex = adminDashboard()
 
     sys.exit(app.exec_())
 

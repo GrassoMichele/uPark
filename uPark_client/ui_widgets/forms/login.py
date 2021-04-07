@@ -10,9 +10,9 @@ from PyQt5.QtCore import pyqtSignal, QObject
 import requests
 
 from entities.user import User
-from server_apis import get_user_categories
-from user_dashboard import userDashboard
-from admin_dashboard import adminDashboard
+from convenience_functions.server_apis import get_user_categories
+from ui_widgets.user.user_dashboard import userDashboard
+from ui_widgets.admin.admin_dashboard import adminDashboard
 
 class Login_signals(QObject):
     close = pyqtSignal()

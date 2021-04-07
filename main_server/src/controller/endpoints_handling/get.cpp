@@ -371,65 +371,65 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
 
     for(Booking b : bookings){
 
-        if (requesting_user_category_name == "Admin" || b.getIdUser() == requesting_user.getId()){
+        //if (requesting_user_category_name == "Admin" || b.getIdUser() == requesting_user.getId()){
 
-            // filtering on user_id required
-            if (bookings_id_user != 0 && b.getIdUser() != bookings_id_user)
+        // filtering on user_id required
+        if (bookings_id_user != 0 && b.getIdUser() != bookings_id_user)
+            continue;
+
+        if (bookings_id_parking_lot != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != bookings_id_parking_lot)
+            continue;
+
+        if (bookings_since != "null") {
+            struct tm existing_b_end_struct;
+            std::istringstream bdts(b.getDateTimeEnd());
+            bdts >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
+            time_t existing_b_end_time = timegm(&existing_b_end_struct);
+
+            struct tm filter_b_start_struct;
+            std::istringstream f_bdts(bookings_since + " 00:00:00");
+            f_bdts >> std::get_time(&filter_b_start_struct, "%Y-%m-%d %T");
+            time_t filter_b_start_time = timegm(&filter_b_start_struct);
+
+            if (difftime(existing_b_end_time, filter_b_start_time) <= 0)
                 continue;
-
-            if (bookings_id_parking_lot != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != bookings_id_parking_lot)
-                continue;
-
-            if (bookings_since != "null") {
-                struct tm existing_b_start_struct;
-                std::istringstream bdts(b.getDateTimeStart());
-                bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
-                time_t existing_b_start_time = timegm(&existing_b_start_struct);
-
-                struct tm filter_b_start_struct;
-                std::istringstream f_bdts(bookings_since + " 00:00:00");
-                f_bdts >> std::get_time(&filter_b_start_struct, "%Y-%m-%d %T");
-                time_t filter_b_start_time = timegm(&filter_b_start_struct);
-
-                if (difftime(existing_b_start_time, filter_b_start_time) < 0)
-                    continue;
-            }
-
-            if (bookings_until != "null") {
-                struct tm existing_b_start_struct;
-                std::istringstream bdts(b.getDateTimeStart());
-                bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
-                time_t existing_b_start_time = timegm(&existing_b_start_struct);
-
-                struct tm filter_b_end_struct;
-                std::istringstream f_bdte(bookings_until + " 00:00:00");
-                f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
-                time_t filter_b_end_time = timegm(&filter_b_end_struct);
-                // include entire last day
-                filter_b_end_time += (3600 * 24);
-
-                if (difftime(existing_b_start_time, filter_b_end_time) >= 0)
-                    continue;
-            }
-
-            json::value b_json= json::value::object(true);   // keep_order=true
-            b_json["id"] = json::value::number(b.getId());
-            b_json["datetime_start"] = json::value::string(b.getDateTimeStart());
-            b_json["datetime_end"] = json::value::string(b.getDateTimeEnd());
-            b_json["entry_time"] = json::value::string(b.getEntryTime());
-            b_json["exit_time"] = json::value::string(b.getExitTime());
-
-            std::stringstream decimal_value;
-            decimal_value << std::fixed << std::setprecision(2) << b.getAmount();
-            b_json["amount"] = json::value::string(decimal_value.str());
-
-            b_json["id_user"] = json::value::number(b.getIdUser());
-            b_json["id_vehicle"] = json::value::number(b.getIdVehicle());
-            b_json["id_parking_slot"] = json::value::number(b.getIdParkingSlot());
-            b_json["note"] = json::value::string(b.getNote());
-
-            response[i++]=b_json;
         }
+
+        if (bookings_until != "null") {
+            struct tm existing_b_start_struct;
+            std::istringstream bdts(b.getDateTimeStart());
+            bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
+            time_t existing_b_start_time = timegm(&existing_b_start_struct);
+
+            struct tm filter_b_end_struct;
+            std::istringstream f_bdte(bookings_until + " 00:00:00");
+            f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
+            time_t filter_b_end_time = timegm(&filter_b_end_struct);
+            // include entire last day
+            filter_b_end_time += (3600 * 24);
+
+            if (difftime(existing_b_start_time, filter_b_end_time) >= 0)
+                continue;
+        }
+
+        json::value b_json= json::value::object(true);   // keep_order=true
+        b_json["id"] = json::value::number(b.getId());
+        b_json["datetime_start"] = json::value::string(b.getDateTimeStart());
+        b_json["datetime_end"] = json::value::string(b.getDateTimeEnd());
+        b_json["entry_time"] = json::value::string(b.getEntryTime());
+        b_json["exit_time"] = json::value::string(b.getExitTime());
+
+        std::stringstream decimal_value;
+        decimal_value << std::fixed << std::setprecision(2) << b.getAmount();
+        b_json["amount"] = json::value::string(decimal_value.str());
+
+        b_json["id_user"] = json::value::number(b.getIdUser());
+        b_json["id_vehicle"] = json::value::number(b.getIdVehicle());
+        b_json["id_parking_slot"] = json::value::number(b.getIdParkingSlot());
+        b_json["note"] = json::value::string(b.getNote());
+
+        response[i++]=b_json;
+        //}
     }
 
     request.reply(status_codes::OK, response);

@@ -7,8 +7,8 @@ from PyQt5.QtGui import QFont
 
 import sys
 
-from signup import SignUp
-from login import Login
+from ui_widgets.forms.signup import SignUp
+from ui_widgets.forms.login import Login
 
 class Home(QMainWindow):
 

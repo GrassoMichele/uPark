@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSignal, QObject
 
 import requests
 
-from server_apis import get_user_categories
+from convenience_functions.server_apis import get_user_categories
 
 # signal used to delete the signup instance from home class in case of exceptions (e.g. server down )
 class SignUp_signals(QObject):

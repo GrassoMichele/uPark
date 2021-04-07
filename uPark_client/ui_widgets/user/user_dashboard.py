@@ -1,15 +1,15 @@
 #! /usr/bin/python3
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QDesktopWidget, \
-                             QLabel, QApplication, QMainWindow, QPushButton
+                             QLabel, QApplication, QMainWindow, QPushButton, QFrame
 
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QFont
 
 import sys
-from urllib3.exceptions import HTTPError
 
+from .park import Park
 
-class adminDashboard(QMainWindow):
+class userDashboard(QMainWindow):
 
     def __init__(self, user):
         super().__init__()
@@ -17,50 +17,36 @@ class adminDashboard(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setObjectName("MainWindow")
-        #self.setStyleSheet("#MainWindow { border-image: url(utility/pictures/home.jpg) 0 0 0 0 stretch stretch; }")
-
-        self.signup = None
-        self.login = None
-
         self.widget = QWidget(self)
-
-        vbox = QVBoxLayout()
-
-        vbox.addStretch()
-
-        app_name = QLabel("ADMIN DASHBOARD")  #si
-        app_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        app_name.setFont(QFont("Arial", 40))
-        app_name.setStyleSheet("color: black; ")
-
-        vbox.addWidget(app_name)
-
-        vbox.addStretch()
 
         hbox = QHBoxLayout()
 
-        signup_btn = QPushButton("Sign-up")
-        signup_btn.clicked.connect(self.showSignup)
+        vbox = QVBoxLayout()
+        vbox.addWidget(QPushButton("arrivederci!"))
+        vbox.addWidget(QPushButton("benvenuto!"))
 
-        login_btn = QPushButton("Login")
-        login_btn.clicked.connect(self.showLogin)
+        hbox.addLayout(vbox, 1)
 
-        hbox.addStretch()
-        hbox.addWidget(signup_btn)
-        hbox.addStretch()
-        hbox.addWidget(login_btn)
-        hbox.addStretch()
+        line = QFrame()
+        line.setFrameShape(QFrame.VLine)
+        line.setFrameShadow(QFrame.Sunken)
+        line.setLineWidth(1)
+        hbox.addWidget(line, 1)
 
-        vbox.addLayout(hbox)
+        # stackWidget
+        hbox.addWidget(Park(),10)
 
-        vbox.addStretch()
+        # hbox.setStretch(0,1)
+        # hbox.setStretch(1,1)
+        # hbox.setStretch(2,10)
 
-        self.widget.setLayout(vbox)
+
+        self.widget.setLayout(hbox)
 
         self.setCentralWidget(self.widget)
 
-        self.setWindowTitle('Dashboard')   #si
+
+        self.setWindowTitle('Dashboard')
         self.full_screen()
         self.show()
 
@@ -91,7 +77,7 @@ class adminDashboard(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    ex = adminDashboard()
+    ex = userDashboard()
 
     sys.exit(app.exec_())
 
