@@ -166,7 +166,9 @@ class Park(QWidget):
         self.table_signal = Table_signal()
         self.table_signal.message.connect(self.make_booking)
 
-        hbox = QHBoxLayout(self)
+        vbox0 = QVBoxLayout(self)
+
+        hbox = QHBoxLayout()
 
         h_vbox = QVBoxLayout()
         h_vbox.addWidget(QLabel("Parking lots: "), 1, Qt.AlignBottom)
@@ -181,12 +183,12 @@ class Park(QWidget):
 
         table_hbox = QHBoxLayout()
         self.tableWidget = Bookings_table(50,96, self, self.table_signal)           # 50 should be the parking lot number of slots
-        table_hbox.addWidget(self.tableWidget, 11)
+        table_hbox.addWidget(self.tableWidget, 10)
 
         self.vehicle_types_table = QTableWidget()
         self.vehicle_types_table.setEditTriggers(QAbstractItemView.NoEditTriggers)			# no editable
         self.vehicle_types_table.setColumnCount(1)
-        self.vehicle_types_table.setHorizontalHeaderLabels(["Reserved for"])
+        self.vehicle_types_table.setHorizontalHeaderLabels(["Reserved:   "])
         self.vehicle_types_table.verticalHeader().hide()                                    # possible modification with another column which items are parking slot numbers
         self.vehicle_types_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         table_hbox.addWidget(self.vehicle_types_table, 1)
@@ -201,21 +203,22 @@ class Park(QWidget):
         self.cal.setGridVisible(True)
         #self.cal.setMinimumDate(QDate.currentDate())		# not show previous days
         self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))
-        v_hbox = QHBoxLayout()
-        v_hbox.addStretch(1)
-        v_hbox.addWidget(self.cal)
-        v_hbox.addStretch(1)
-        vbox.addLayout(v_hbox, 1)
 
         hbox.addLayout(vbox, 10)
 
-        self.setLayout(hbox)
+        text = QLabel("Park")
+        text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
+        vbox0.addWidget(text, 1, Qt.AlignTop | Qt.AlignHCenter)
+
+        vbox0.addLayout(hbox, 5)
+        vbox0.addWidget(self.cal, 5, Qt.AlignHCenter)
+        self.setLayout(vbox0)
 
         self.get_parking_lots()
         #self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()]["id"])
 
         self.setWindowTitle("Park")
-        self.full_screen()
+        #self.full_screen()
         self.show()
 
 
@@ -300,11 +303,11 @@ class Park(QWidget):
         print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())
 
         response = make_http_request(self.https_session, "get", "bookings", params = {"since":bookings_start_datetime.split()[0], "until":bookings_end_datetime.split()[0], "id_parking_lot":self.parking_lot.get_id()})
-        if response:
+        if response.json():
             bookings = [Booking(**booking) for booking in response.json()]
 
         # bookings are in UTC
-        if bookings:
+        #if bookings:
             #print([f"{booking.get_datetime_start()} - {booking.get_datetime_end()}" for booking in bookings])
 
             for booking in bookings:

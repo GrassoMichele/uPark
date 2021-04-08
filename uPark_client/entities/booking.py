@@ -15,11 +15,11 @@ class Booking:
     def set_id(self, id):
         self._id = id
 
-    # def set_datetime_start(self, datetime_start):
-    #     self._datetime_start = datetime_start
-    #
-    # def set_datetime_end(self, datetime_end):
-    #     self._datetime_end = datetime_end
+    def set_datetime_start(self, datetime_start):
+        self._datetime_start = datetime_start
+
+    def set_datetime_end(self, datetime_end):
+        self._datetime_end = datetime_end
 
     def set_entry_time(self, entry_time):
         self._entry_time = entry_time

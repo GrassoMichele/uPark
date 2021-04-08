@@ -9,6 +9,8 @@ import sys
 import requests
 
 from .park import Park
+from .bookings_in_progress import BookingsInProgress
+
 
 class userDashboard(QMainWindow):
 
@@ -27,17 +29,12 @@ class userDashboard(QMainWindow):
         hbox = QHBoxLayout()
 
         self.frame = QFrame(self)
-        self.frame.setStyleSheet("QPushButton {font-family: Ubuntu; padding: 40px}")
+        self.frame.setStyleSheet("QPushButton {font-family: Ubuntu; padding: 40px; border: 0px;}")
 
         self.buttons_names = ["Park", "Bookings in Progress", "Bookings Expired", "Vehicles", "Profile", "Logout"]
         self.buttons = []
 
         vbox = QVBoxLayout()
-
-        # hline = QFrame()
-        # hline.setFrameShape(QFrame.HLine)
-        # hline.setFrameShadow(QFrame.Sunken)
-        # hline.setLineWidth(1)
 
         for name in self.buttons_names:
             hline = QFrame()
@@ -46,12 +43,14 @@ class userDashboard(QMainWindow):
             hline.setLineWidth(1)
 
             self.buttons.append(QPushButton(name))
-            self.buttons[-1].setFlat(True)
+            #self.buttons[-1].setFlat(True)
             self.buttons[-1].clicked.connect(self.change_widget)
             vbox.addWidget(self.buttons[-1])
 
             if name != self.buttons_names[-1]:
                 vbox.addWidget(hline, 1)
+
+        self.buttons[0].setStyleSheet("background-color: #9BCAEE")
 
         self.frame.setLayout(vbox)
 
@@ -64,23 +63,21 @@ class userDashboard(QMainWindow):
 
         hbox.addWidget(vline, 1)
 
-        self.park_widget = Park(self.https_session, self.user)
-        self.booking_in_progress = QWidget()
-        self.stack.addWidget(self.park_widget)
-        self.stack.addWidget(self.booking_in_progress)
+
+        self.stack.addWidget(Park(self.https_session, self.user))
+        self.stack.addWidget(BookingsInProgress(self.https_session, self.user))
         #self.stack.setCurrentIndex(1)
         #setCurrentWidget(QWidget *widget)
-        hbox.addWidget(self.stack, 10)
-
+        hbox.addWidget(self.stack, 20)
 
         self.widget.setLayout(hbox)
 
         self.setCentralWidget(self.widget)
 
-
         self.setWindowTitle('Dashboard')
         self.full_screen()
         self.show()
+
 
     def full_screen(self):
         desktop_resolution = QDesktopWidget().availableGeometry()
@@ -90,6 +87,12 @@ class userDashboard(QMainWindow):
         button_sender = self.sender()
         widget_index = self.buttons_names.index(button_sender.text())
         self.stack.setCurrentIndex(widget_index)
+
+        for button in self.buttons:
+            if button != button_sender:
+                button.setStyleSheet("")
+            else:
+                button.setStyleSheet("background-color: #9BCAEE")
 
 # def main():
 #     app = QApplication(sys.argv)

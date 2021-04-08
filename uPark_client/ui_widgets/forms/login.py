@@ -89,7 +89,7 @@ class Login(QWidget):
 
         if response:
             response_json = response.json()                   # https response body as json
-            QMessageBox.about(self, "Login response", response_json["message"])
+            QMessageBox.about(self, "Login", response_json["message"])
 
             del response_json["message"]                      # call del to make the response_json matches with User constructor
             user = User(**response_json)                      # dictionary unpacking
