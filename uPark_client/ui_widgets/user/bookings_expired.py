@@ -41,10 +41,7 @@ class DetailsDialog(QDialog):
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
 
-        self.buttonBox.addButton("Delete", QDialogButtonBox.RejectRole)
-
         self.buttonBox.accepted.connect(self.accept)        # QDialog slot
-        self.buttonBox.rejected.connect(lambda: self.delete_booking(https_session,booking))
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(QLabel("<b><i>Booking info: </i></b>"), 0, Qt.AlignCenter)
@@ -58,14 +55,7 @@ class DetailsDialog(QDialog):
         self.setLayout(self.layout)
 
 
-    def delete_booking(self, https_session, booking):
-        response = make_http_request(https_session, "delete", "bookings/" + str(booking.get_id()))
-        if response:
-            QMessageBox.information(self, "Server response", response.text)
-            self.reject()
-
-
-class BookingsInProgress(QWidget):
+class BookingsExpired(QWidget):
 
     def __init__(self, https_session, user):
         super().__init__()
@@ -79,7 +69,7 @@ class BookingsInProgress(QWidget):
 
         vbox = QVBoxLayout()
 
-        text = QLabel("Bookings in progress")
+        text = QLabel("Bookings expired")
         text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
         vbox.addWidget(text, 1, Qt.AlignTop | Qt.AlignHCenter)
         self.user_bookings_table = QTableWidget(0, len(booking_info)+1)
@@ -100,9 +90,9 @@ class BookingsInProgress(QWidget):
 
         self.get_user_vehicles()
         self.get_parking_lots()
-        #self.get_user_bookings()
+        self.get_user_bookings()
 
-        self.setWindowTitle("Bookings in progress")
+        self.setWindowTitle("Bookings expired")
         self.show()
 
 
@@ -159,19 +149,22 @@ class BookingsInProgress(QWidget):
     def get_user_bookings(self):
         self.user_bookings_table.clearContents()
         self.user_bookings_table.setRowCount(0)
+        datetime_format = "%Y-%m-%d %H:%M:%S"
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H_%M_%S")
-        #print(now)
+        #print(now, now.date())
 
-        response = make_http_request(self.https_session, "get", "bookings", params = {"since":now, "id_user":self.user.get_id()})
-        #print(response.json())
+        response = make_http_request(self.https_session, "get", "bookings", params = {"until":now, "id_user":self.user.get_id()})
 
-        if response.json():
+        if response:
             self.bookings = [Booking(**booking) for booking in response.json()]
-            #print(len(self.bookings))
+
             for i, booking in enumerate(self.bookings):
-                #print(booking)
                 booking_methods = [booking.get_datetime_start, booking.get_datetime_end, self.get_vehicle_info, self.get_parking_slot_info]
+                #to delete booking in Progress
+                booking_time = datetime.replace(datetime.strptime(booking.get_datetime_end(), "%Y-%m-%d %H:%M:%S"), tzinfo=timezone.utc )
+                if (booking_time - datetime.now(timezone.utc)).total_seconds() >= 0:
+                    continue
 
                 # from UTC to local timezone
                 booking.set_datetime_start(datetime_UTC_to_local(booking.get_datetime_start()))
@@ -180,7 +173,7 @@ class BookingsInProgress(QWidget):
                 self.user_bookings_table.insertRow(i)
                 for j in range(self.user_bookings_table.columnCount()):
                     method = booking_methods[j]
-                    if j in [0,1]:
+                    if j not in [2,3,4]:                    # 2 = vehicle_info, 3,4 = parking lot name and parking slot number
                         item = QTableWidgetItem(method())
                         item.setTextAlignment(Qt.AlignCenter)
                         self.user_bookings_table.setItem(i, j, item)
@@ -190,7 +183,6 @@ class BookingsInProgress(QWidget):
                         self.user_bookings_table.setItem(i, j, item)
                     else:
                         slot_info = method(booking.get_id_parking_slot())
-                        #print("slot_info " , slot_info)
                         item = QTableWidgetItem(slot_info[0])
                         item.setTextAlignment(Qt.AlignCenter)
                         self.user_bookings_table.setItem(i, j, item)
@@ -203,7 +195,7 @@ class BookingsInProgress(QWidget):
         for row in range(self.user_bookings_table.rowCount()):
             item = QPushButton("Show")
             self.user_bookings_table.setCellWidget(row, 5, item)
-            item.clicked.connect(lambda _,row=row: self.show_booking_details(row))
+            item.clicked.connect(lambda _,row=row: self.show_booking_details(row))      # da fare collegamento a dialog
 
 
     def show_booking_details(self, row):

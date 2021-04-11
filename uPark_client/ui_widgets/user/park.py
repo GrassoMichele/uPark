@@ -297,12 +297,12 @@ class Park(QWidget):
 
         # start: from local 00:00:00 to utc (e.g. local 2021-04-01 00:00:00 = UTC 2021-03-31 22:00)
         # end: from local 23:59:00 to utc
-        bookings_start_datetime = datetime_to_UTC(day, "00:00")
-        bookings_end_datetime = datetime_to_UTC(day, "23:59")   # 23:59 for include bookings of time xx:45, 23:45 is enough
+        bookings_start_datetime = datetime_to_UTC(day, "00:00", True)     #is_query = True
+        bookings_end_datetime = datetime_to_UTC(day, "23:59", True)   # 23:59 for include bookings of time xx:45, 23:45 is enough
         # bookings_start_datetime could be different from bookings_end_datetime (max 1 day)
         print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())
 
-        response = make_http_request(self.https_session, "get", "bookings", params = {"since":bookings_start_datetime.split()[0], "until":bookings_end_datetime.split()[0], "id_parking_lot":self.parking_lot.get_id()})
+        response = make_http_request(self.https_session, "get", "bookings", params = {"since":bookings_start_datetime, "until":bookings_end_datetime, "id_parking_lot":self.parking_lot.get_id()})
         if response.json():
             bookings = [Booking(**booking) for booking in response.json()]
 
@@ -313,57 +313,45 @@ class Park(QWidget):
             for booking in bookings:
                 print("-----------------\n", booking)
 
-                # filter booking on temporal validity
-                # discard all bookings ending before bookings_start_datetime => booking['datetime_end'] <= bookings_start_datetime
-                if (datetime.strptime(f"{booking.get_datetime_end()}", "%Y-%m-%d %H:%M:%S") - datetime.strptime(f"{bookings_start_datetime}", "%Y-%m-%d %H:%M:%S")).total_seconds() <= 0:
-                    #print("ops")
-                    continue
-                # discard all bookings starting after bookings_end_datetime => booking['datetime_start'] >= bookings_end_datetime
-                elif (datetime.strptime(f"{booking.get_datetime_start()}", "%Y-%m-%d %H:%M:%S") - datetime.strptime(f"{bookings_end_datetime}", "%Y-%m-%d %H:%M:%S")).total_seconds() >= 0:
-                    #print("ops1")
-                    continue
-                # valid booking
+                booking_start = datetime_UTC_to_local(booking.get_datetime_start())
+                print("Local booking start: ", booking_start)
+
+                booking_end = datetime_UTC_to_local(booking.get_datetime_end())
+                print("Local booking end: ", booking_end)
+
+                booking_start = booking_start if booking_start.split()[0] == day else day + " 00:00:00"      # if booking start day in localtime is different from booking end day in localtime (booking on multiple days) select all table cells.
+                print("New start: ", booking_start)
+
+                # Set end time to 24:00:00 for bookings which end day is temporally subsequent to the selected day.
+                booking_end = booking_end if booking_end.split()[0] == day else day + " 24:00:00"
+                print("New end: ", booking_end)
+
+                # show booking in table
+                booking_start_time_split = booking_start.split()[1].split(":")          # list with booking time info
+                booking_end_time_split = booking_end.split()[1].split(":")
+
+                # find table row index
+                try:
+                    slot_index = self.parking_lot.get_parking_slots().index(ParkingSlot(id = booking.get_id_parking_slot()))
+                except ValueError:
+                    return
                 else:
-                    # convert booking datetime from UTC to local
-                    booking_start = datetime_UTC_to_local(booking.get_datetime_start())
-                    print("Local booking start: ", booking_start)
+                    table_row_index = self.parking_lot.get_parking_slots()[slot_index].get_number() - 1
 
-                    booking_end = datetime_UTC_to_local(booking.get_datetime_end())
-                    print("Local booking end: ", booking_end)
+                # find table column indexes
+                start_table_col_index = int(booking_start_time_split[0])*4 + int(booking_start_time_split[1])//15      # table column index = hour*4 + minutes/15
+                end_table_col_index = int(booking_end_time_split[0])*4 + int(booking_end_time_split[1])//15
 
-                    booking_start = booking_start if booking_start.split()[0] == day else day + " 00:00:00"      # if booking start day in localtime is different from booking end day in localtime (booking on multiple days) select all table cells.
-                    print("New start: ", booking_start)
+                # show booking in table, different color for booking owner user
+                color = self.tableWidget.cells_colors["user_bookings"] if booking.get_id_user() == self.user.get_id() else self.tableWidget.cells_colors["other_bookings"]
+                for i in range(start_table_col_index, end_table_col_index):
+                    self.tableWidget.item_paint(table_row_index, i, color)
 
-                    # Set end time to 24:00:00 for bookings which end day is temporally subsequent to the selected day.
-                    booking_end = booking_end if booking_end.split()[0] == day else day + " 24:00:00"
-                    print("New end: ", booking_end)
-
-                    # show booking in table
-                    booking_start_time_split = booking_start.split()[1].split(":")          # list with booking time info
-                    booking_end_time_split = booking_end.split()[1].split(":")
-
-                    # find table row index
-                    try:
-                        slot_index = self.parking_lot.get_parking_slots().index(ParkingSlot(id = booking.get_id_parking_slot()))
-                    except ValueError:
-                        return
-                    else:
-                        table_row_index = self.parking_lot.get_parking_slots()[slot_index].get_number() - 1
-
-                    # find table column indexes
-                    start_table_col_index = int(booking_start_time_split[0])*4 + int(booking_start_time_split[1])//15      # table column index = hour*4 + minutes/15
-                    end_table_col_index = int(booking_end_time_split[0])*4 + int(booking_end_time_split[1])//15
-
-                    # show booking in table, different color for booking owner user
-                    color = self.tableWidget.cells_colors["user_bookings"] if booking.get_id_user() == self.user.get_id() else self.tableWidget.cells_colors["other_bookings"]
-                    for i in range(start_table_col_index, end_table_col_index):
-                        self.tableWidget.item_paint(table_row_index, i, color)
-
-                    # deny bookings 15 minutes before and after existing bookings
-                    if (start_table_col_index > 0):
-                        self.tableWidget.item_paint(table_row_index, start_table_col_index-1, self.tableWidget.cells_colors["bookings_separation"])
-                    if (end_table_col_index < 96):
-                        self.tableWidget.item_paint(table_row_index, end_table_col_index, self.tableWidget.cells_colors["bookings_separation"])
+                # deny bookings 15 minutes before and after existing bookings
+                if (start_table_col_index > 0):
+                    self.tableWidget.item_paint(table_row_index, start_table_col_index-1, self.tableWidget.cells_colors["bookings_separation"])
+                if (end_table_col_index < 96):
+                    self.tableWidget.item_paint(table_row_index, end_table_col_index, self.tableWidget.cells_colors["bookings_separation"])
 
 
     def get_booking_amount(self, utc_start_datetime_string, utc_end_datetime_string, slot_vehicle_type_id):
@@ -486,6 +474,8 @@ class Park(QWidget):
                 QMessageBox.information(self, "Booking response", json_response["message"] + "\nPrice: " + str(json_response["amount"]))
                 self.get_bookings(self.parking_lot, False)
 
+    def showEvent(self, event):
+        self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False)
 
 # if __name__ == '__main__':
 #     app = QApplication(sys.argv)

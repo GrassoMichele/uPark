@@ -157,7 +157,7 @@ void UParkController::handleGet(http_request request) {
             handler_auth(request, false, &get_ns::parking_lot_id_parking_slots);
         }
 
-        // GET bookings?since=xxxx-xx-xx&until=xxxx-xx-xx&id_user=x&id_parking_lot=x
+        // GET bookings?since=yyyy-mm-ddThh_mm_dd&until=yyyy-mm-ddThh_mm_dd&id_user=x&id_parking_lot=x
         else if (path[0] == "bookings" && path.size() == 1) {
             handler_auth(request, false, &get_ns::bookings);
         }

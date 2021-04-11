@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 from dateutil.tz import tzutc, tzlocal
 
 # Also pass day as parameter to handle Daylight saving time
-def datetime_to_UTC(day, time):
+def datetime_to_UTC(day, time, is_query = False):
     time += ":00"               # columns format xx:xx
 
     # Auto-detect timezones:
@@ -25,7 +25,8 @@ def datetime_to_UTC(day, time):
     # Convert time to UTC
     utc_datetime = local_datetime.astimezone(utc_zone)
     # Generate UTC time string
-    utc_datetime_string = utc_datetime.strftime('%Y-%m-%d %H:%M:%S')
+    utc_datetime_string = utc_datetime.strftime('%Y-%m-%dT%H_%M_%S') if is_query else utc_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
 
     return utc_datetime_string
 

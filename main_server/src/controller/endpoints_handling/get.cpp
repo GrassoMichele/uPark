@@ -1,4 +1,6 @@
 #include "endpoints_handling.hpp"
+#include <algorithm>
+#include <string>
 
 using namespace web;
 using namespace http;
@@ -352,6 +354,7 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
 
     std::string bookings_since = query.count("since") == 1 ? query["since"] : "null";
     std::string bookings_until = query.count("until") == 1 ? query["until"] : "null";
+
     int bookings_id_user = query.count("id_user") == 1 ? std::stoi(query["id_user"]) : 0;
     int bookings_id_parking_lot = query.count("id_parking_lot") == 1 ? std::stoi(query["id_parking_lot"]) : 0;
 
@@ -365,14 +368,54 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
     //response is a list of json object
     json::value response;
     int i=0;
+    std::string time_format = "YYYY-mm-dd";
 
-    //adding filter to discriminate from admin which can view all the bookings
-    //and user which can view only his own bookings.
+
+    //since time management
+    time_t filter_b_start_time;
+    if (bookings_since != "null") {
+        struct tm filter_b_start_struct;
+
+        if (bookings_since.length() != time_format.length()){            //if booking since format contains also time YYYY-mm-ddTHH:MM:SS
+            std::replace(bookings_since.begin(), bookings_since.end(), 'T', ' ');
+            std::replace(bookings_since.begin(), bookings_since.end(), '_', ':');
+        }
+        else{
+            bookings_since += " 00:00:00";
+        }
+
+        std::istringstream f_bdts(bookings_since);
+        f_bdts >> std::get_time(&filter_b_start_struct, "%Y-%m-%d %T");
+        filter_b_start_time = timegm(&filter_b_start_struct);
+    }
+
+
+    //until time management
+    time_t filter_b_end_time;
+    if (bookings_until != "null") {
+        struct tm filter_b_end_struct;
+        bool no_time_provided = false;
+
+        if (bookings_until.length() != time_format.length()){
+            std::replace(bookings_until.begin(), bookings_until.end(), 'T', ' ');
+            std::replace(bookings_until.begin(), bookings_until.end(), '_', ':');
+        }
+        else{
+            no_time_provided = true;
+            bookings_until += " 00:00:00";
+        }
+
+        std::istringstream f_bdte(bookings_until);
+        f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
+        filter_b_end_time = timegm(&filter_b_end_struct);
+
+        //include entire last day
+        if (no_time_provided)
+            filter_b_end_time += (3600 * 24);
+    }
 
     for(Booking b : bookings){
-
         //if (requesting_user_category_name == "Admin" || b.getIdUser() == requesting_user.getId()){
-
         // filtering on user_id required
         if (bookings_id_user != 0 && b.getIdUser() != bookings_id_user)
             continue;
@@ -386,11 +429,6 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
             bdts >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
             time_t existing_b_end_time = timegm(&existing_b_end_struct);
 
-            struct tm filter_b_start_struct;
-            std::istringstream f_bdts(bookings_since + " 00:00:00");
-            f_bdts >> std::get_time(&filter_b_start_struct, "%Y-%m-%d %T");
-            time_t filter_b_start_time = timegm(&filter_b_start_struct);
-
             if (difftime(existing_b_end_time, filter_b_start_time) <= 0)
                 continue;
         }
@@ -400,13 +438,6 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
             std::istringstream bdts(b.getDateTimeStart());
             bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
             time_t existing_b_start_time = timegm(&existing_b_start_struct);
-
-            struct tm filter_b_end_struct;
-            std::istringstream f_bdte(bookings_until + " 00:00:00");
-            f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
-            time_t filter_b_end_time = timegm(&filter_b_end_struct);
-            // include entire last day
-            filter_b_end_time += (3600 * 24);
 
             if (difftime(existing_b_start_time, filter_b_end_time) >= 0)
                 continue;

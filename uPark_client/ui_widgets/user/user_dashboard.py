@@ -10,7 +10,8 @@ import requests
 
 from .park import Park
 from .bookings_in_progress import BookingsInProgress
-
+from .bookings_expired import BookingsExpired
+from .user_vehicles import UserVehicles
 
 class userDashboard(QMainWindow):
 
@@ -66,6 +67,9 @@ class userDashboard(QMainWindow):
 
         self.stack.addWidget(Park(self.https_session, self.user))
         self.stack.addWidget(BookingsInProgress(self.https_session, self.user))
+        self.stack.addWidget(BookingsExpired(self.https_session, self.user))
+        self.stack.addWidget(UserVehicles(self.https_session, self.user))
+
         #self.stack.setCurrentIndex(1)
         #setCurrentWidget(QWidget *widget)
         hbox.addWidget(self.stack, 20)
