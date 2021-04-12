@@ -81,9 +81,9 @@ class BookingsExpired(QWidget):
         self.user_bookings_table.horizontalHeader().setStretchLastSection(True);
         self.user_bookings_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
 
-        vbox.addWidget(self.user_bookings_table, 5)
+        vbox.addWidget(self.user_bookings_table, 9)
 
-        vbox.addStretch(5)
+        vbox.addStretch(1)
         #vbox.setStretchFactor(self.user_bookings_table, 5)
 
         self.setLayout(vbox)

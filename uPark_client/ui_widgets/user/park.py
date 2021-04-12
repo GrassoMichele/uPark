@@ -55,6 +55,14 @@ class Bookings_table(QTableWidget):
         	self.quarters_of_hour[i] = item
 
         self.setHorizontalHeaderLabels(self.quarters_of_hour)
+
+        # move scrollbar slider to actual time slot
+        now_time = datetime.now().time()
+        hour = int(now_time.strftime("%H"))
+        minutes = int(now_time.strftime("%M"))
+        quarter_of_hour_idx = hour * 4 + minutes//15
+        self.horizontalScrollBar().setValue(quarter_of_hour_idx)
+
         self.show()
 
 

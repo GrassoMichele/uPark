@@ -8,7 +8,7 @@ from PyQt5.QtGui import QFont
 import sys
 
 
-class adminDashboard(QMainWindow):
+class AdminDashboard(QMainWindow):
 
     def __init__(self, user):
         super().__init__()

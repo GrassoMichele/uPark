@@ -92,6 +92,7 @@ class Home(QMainWindow):
             try:
                 self.login = Login()
                 self.login.signals.close.connect(self.login.close)
+                self.login.signals.logout.connect(self.logout)
             except Exception:
                 self.login = None
 
@@ -99,6 +100,11 @@ class Home(QMainWindow):
         if self.login is not None:
             self.login.show()
             self.login.signals.home_close.connect(self.close)
+
+
+    def logout(self):
+        self.login = None
+        self.show()
 
 
 def main():

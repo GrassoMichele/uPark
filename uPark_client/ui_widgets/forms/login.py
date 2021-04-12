@@ -12,12 +12,13 @@ import requests
 from entities.user import User
 from entities.user_category import UserCategory
 from convenience_functions.server_apis import make_http_request
-from ui_widgets.user.user_dashboard import userDashboard
-from ui_widgets.admin.admin_dashboard import adminDashboard
+from ui_widgets.user.user_dashboard import UserDashboard
+from ui_widgets.admin.admin_dashboard import AdminDashboard
 
 class Login_signals(QObject):
     close = pyqtSignal()
     home_close = pyqtSignal()
+    logout = pyqtSignal()
 
 class Login(QWidget):
     def __init__(self):
@@ -106,9 +107,11 @@ class Login(QWidget):
                     admin_id = user_categories[admin_list_index].get_id()
 
                     if user.get_id_user_category() == admin_id:
-                        self.admin_dashboard = adminDashboard(user)
+                        self.admin_dashboard = AdminDashboard(user)
                     else:
-                        self.user_dashboard = userDashboard(user)
+                        self.user_dashboard = UserDashboard(user)
+                        self.user_dashboard.signal.close.connect(self.signals.logout.emit)
+                    self.signals.close.emit()
 
                 except ValueError:
                     print("Error: No admin found in user_categories. Some problem occured in DB uPark!")
@@ -119,6 +122,3 @@ class Login(QWidget):
             else:
                 QMessageBox.critical(None, "Alert", "Server error. Retry later.")
                 #self.signals.close.emit()
-
-
-        self.signals.close.emit()

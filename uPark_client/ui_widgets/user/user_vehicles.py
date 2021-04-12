@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QAbstractItemView, QPushButton, \
                             QVBoxLayout, QHBoxLayout, QDialog, QDialogButtonBox, QListWidget, QWidgetItem, \
-                            QFormLayout, QLineEdit, QComboBox, QFrame, QScrollArea
+                            QFormLayout, QLineEdit, QComboBox, QScrollArea
 
 from PyQt5.QtCore import Qt
 
@@ -62,6 +62,7 @@ class AddVehicleDialog(QDialog):
 
         self.setLayout(self.layout)
 
+
     def add_vehicles(self):
         try:
             selected_vehicle_type_index = self.vehicle_types.index(VehicleType(name = self.vehicle_type_cmb.currentText()))
@@ -71,20 +72,26 @@ class AddVehicleDialog(QDialog):
         else:
             selected_vehicle_type = self.vehicle_types[selected_vehicle_type_index]
 
-            vehicle =   {
-                "license_plate": self.license_plate_le.text(),
-                "brand": self.brand_le.text(),
-                "model": self.model_le.text(),
-                "id_vehicle_type": selected_vehicle_type.get_id()
-            }
+            license_plate = self.license_plate_le.text()
 
-            response = make_http_request(self.https_session, "post", "users/" + str(self.id_user) + "/vehicles", json = vehicle )
-            if response:
-                QMessageBox.information(self, "Server response", response.json()["message"])
-                #close the dialog and sets its result code to 0, emit the finished signal
-                self.done(0)
+            if len(license_plate) != 0:
+
+                vehicle =   {
+                    "license_plate": self.license_plate_le.text(),
+                    "brand": self.brand_le.text(),
+                    "model": self.model_le.text(),
+                    "id_vehicle_type": selected_vehicle_type.get_id()
+                }
+
+                response = make_http_request(self.https_session, "post", "users/" + str(self.id_user) + "/vehicles", json = vehicle )
+                if response:
+                    QMessageBox.information(self, "Server response", response.json()["message"])
+                    #close the dialog and sets its result code to 0, emit the finished signal
+                    self.done(0)
+                else:
+                    self.close()
             else:
-                self.close()
+                QMessageBox.information(self, "uPark tip", "Add a license plate first!")
 
 
     def hideEvent(self, event):
@@ -92,6 +99,7 @@ class AddVehicleDialog(QDialog):
         self.brand_le.clear()
         self.model_le.clear()
         self.vehicle_type_cmb.setCurrentIndex(0)
+
 
 class UserVehicles(QWidget):
 
@@ -149,7 +157,7 @@ class UserVehicles(QWidget):
                 self.vbox_grp.addWidget(vehicle_list, 1, Qt.AlignTop | Qt.AlignVCenter)
 
                 delete_button = QPushButton("Delete")
-                delete_button.setStyleSheet("padding: 10px 30px;")
+                delete_button.setStyleSheet("padding: 10px 30px; margin-bottom: 30px;")
                 delete_button.clicked.connect(self.delete_vehicle)
 
                 self.vbox_grp.addWidget(delete_button, 1, Qt.AlignTop | Qt.AlignHCenter)
@@ -163,22 +171,19 @@ class UserVehicles(QWidget):
         #add a scroll area
         self.vbox.addWidget(self.scroll_area, 8)
 
-        #add an horizontal line
-        hline = QFrame()
-        hline.setFrameShape(QFrame.HLine)
-        hline.setFrameShadow(QFrame.Sunken)
-        hline.setLineWidth(1)
-        self.vbox.addWidget(hline,1)
-
         #"add vehicle" button
         add_button = QPushButton("Add Vehicle")
+        add_button.setStyleSheet("padding: 10px 30px; margin-top: 20px;")
         add_button.clicked.connect(self.show_vehicle_dialog)
         self.vbox.addWidget(add_button, 1, Qt.AlignTop)
+
 
     def mouseDoubleClickEvent(self, event):
         for i, tuple in enumerate(self.qlistwidgets_list):
             if tuple[1].hasFocus() and tuple[1].currentItem() != None:
                 tuple[1].clearSelection()
+                tuple[1].setCurrentItem(None)
+
 
     def get_user_vehicles(self):
         response = make_http_request(self.https_session, "get", "users/" + str(self.user.get_id()) + "/vehicles")
@@ -187,12 +192,14 @@ class UserVehicles(QWidget):
         else:
             self.user_vehicles = []
 
+
     def get_vehicle_types(self):
         response = make_http_request(self.https_session, "get", "vehicle_types")
         if response:
             self.vehicle_types = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
         else:
             self.vehicle_types = []
+
 
     def show_vehicle_dialog(self):
         self.get_vehicle_types()
@@ -204,40 +211,42 @@ class UserVehicles(QWidget):
         else:
             pass
 
+
     def delete_vehicle(self):
         id_vehicle_to_delete = 0
         for i, tuple in enumerate(self.qlistwidgets_list):
             if tuple[2] == self.sender() and tuple[1].currentItem() != None:
                 license_plate = tuple[1].currentItem().text().split(" ")[0]
                 id_vehicle = [vehicle.get_id() for vehicle in self.user_vehicles if license_plate == vehicle.get_license_plate()][0]
-
                 #print(id_vehicle)
                 id_vehicle_to_delete = id_vehicle
+
         if id_vehicle_to_delete != 0:
-            response = make_http_request(self.https_session, "delete", "users/" + str(self.user.get_id()) + "/vehicles/" + str(id_vehicle_to_delete))
-            if response:
-                QMessageBox.information(self, "Server response", response.text)
-                self.reload_widget()
+            # qmessabox to confirm delete
+            reply = QMessageBox.question(self, 'Delete vehicle',
+                                         "Are you sure to delete your vehicle?", QMessageBox.Yes |
+                                         QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                response = make_http_request(self.https_session, "delete", "users/" + str(self.user.get_id()) + "/vehicles/" + str(id_vehicle_to_delete))
+                if response:
+                    QMessageBox.information(self, "Server response", response.text)
+                    self.reload_widget()
+            else:
+                return
         else:
             QMessageBox.information(self, "uPark tip:", "Select a vehicle to delete first!")
 
+
     def reload_widget(self):
-        print("init: verticalbox element #n --> ", self.vbox.count())
+        #print("init: verticalbox element #n --> ", self.vbox.count())
         for i in reversed(range(self.vbox.count())):
-            print(self.vbox.itemAt(i))
+            #print(self.vbox.itemAt(i))
             if i!=0:                          #i=0 is the QLabel of the windowtitle in the QVBoxLayout
                 if isinstance(self.vbox.itemAt(i),QWidgetItem):
                     self.vbox.itemAt(i).widget().setParent(None)
-                # if isinstance(self.vbox.itemAt(i),QVBoxLayout):
-                #     vbox_grp = self.vbox.itemAt(i)
-                #     for j in reversed(range(vbox_grp.count())):
-                #         if isinstance(vbox_grp.itemAt(j),QWidgetItem):
-                #             vbox_grp.itemAt(j).widget().setParent(None)
-                #     self.vbox.itemAt(i).setParent(None)
         self.show_vehicles()
-        print("after show: verticalbox element #n -->", self.vbox.count())
-        for i in reversed(range(self.vbox.count())):
-            print(self.vbox.itemAt(i))
+        #print("after show: verticalbox element #n -->", self.vbox.count())
+
 
     def showEvent(self, event):
         self.reload_widget()
