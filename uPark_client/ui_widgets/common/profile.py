@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 
 
-from convenience_functions.server_apis import make_http_request
+from convenience_functions.server_apis import make_http_request, user_is_admin
 
 from entities.user import User
 from entities.user_category import UserCategory
@@ -71,8 +71,10 @@ class Profile(QWidget):
         self.form_layout.addRow("<b>Name: </b>",  QLabel(self.user.get_name()))
         self.form_layout.addRow("<b>Surname: </b>",  QLabel(self.user.get_surname()))
         self.form_layout.addRow("<b>Password: </b>",  hbox_pass)
-        self.wallet_lbl = QLabel(self.user.get_wallet() + "€")
-        self.form_layout.addRow("<b>Wallet: </b>", self.wallet_lbl)
+        self.wallet_lbl = QLabel(self.user.get_wallet())
+
+        wallet_lbl_name = "<b>Wallet: </b>" if not user_is_admin(self.user, self.https_session) else "<b>uPark Income: </b>"
+        self.form_layout.addRow(wallet_lbl_name, self.wallet_lbl)
         self.form_layout.addRow("<b>Disability: </b>", QLabel(str(self.user.get_disability())))
         self.form_layout.addRow("<b>Category: </b>", QLabel(self.get_user_category_name()))
 
@@ -82,9 +84,10 @@ class Profile(QWidget):
 
         vbox_main.addLayout(vbox_info, 2)
 
-        add_money_button = QPushButton("Add money")
-        add_money_button.clicked.connect(self.add_money)
-        vbox_main.addWidget(add_money_button, Qt.AlignTop)
+        if not user_is_admin(self.user, self.https_session):
+            add_money_button = QPushButton("Add money")
+            add_money_button.clicked.connect(self.add_money)
+            vbox_main.addWidget(add_money_button, Qt.AlignTop)
 
         vbox_main.addStretch(5)
 
@@ -137,7 +140,7 @@ class Profile(QWidget):
                 self.user.set_wallet(str(float(self.user.get_wallet()) + amount))
 
                 # update info
-                self.wallet_lbl.setText(self.user.get_wallet() + "€")
+                self.wallet_lbl.setText(self.user.get_wallet())
 
             #print(new_password)
         elif ok and len(new_password) == 0:

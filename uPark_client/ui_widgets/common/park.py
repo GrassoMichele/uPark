@@ -11,14 +11,14 @@ import requests
 
 from datetime import timedelta, datetime
 
-from convenience_functions.server_apis import make_http_request
+from convenience_functions.server_apis import make_http_request, user_is_admin
 from convenience_functions.datetime_management import datetime_to_UTC, datetime_UTC_to_local
 from entities.user import User
+from entities.user_category import UserCategory
 from entities.parking_lot import ParkingLot
 from entities.parking_slot import ParkingSlot
 from entities.vehicle_type import VehicleType
 from entities.booking import Booking
-from entities.user_category import UserCategory
 from entities.hourly_rate import HourlyRate
 from entities.vehicle import Vehicle
 
@@ -83,7 +83,7 @@ class Bookings_table(QTableWidget):
                     if (indexSelection[i][0] != indexSelection[i-1][0]) | indexSelection[i][1] not in [indexSelection[i-1][1] + 1, indexSelection[i-1][1] - 1]:
                         error = True
                 if error == True:
-                    QMessageBox.critical(self, "Error", "Not a valid booking request!")
+                    QMessageBox.critical(self, "Error", "Not a valid selection!")
                     return
 
                 # if no errors occured, proceed
@@ -139,17 +139,17 @@ class BookingDialog(QDialog):
 
         self.layout.addWidget(QLabel("<b>Vehicle: </b>"))
         # filter on user vehicles
-        self.user_category_cmb = QComboBox()
-        self.user_category_cmb.addItems([f"{vehicle.get_license_plate()} - {vehicle.get_brand()} - {vehicle.get_model()}" for vehicle in user_vehicles if vehicle.get_id_vehicle_type() == slot_vehicle_type_id])
-        if self.user_category_cmb.count() == 0:
+        self.user_vehicles_cmb = QComboBox()
+        self.user_vehicles_cmb.addItems([f"{vehicle.get_license_plate()} - {vehicle.get_brand()} - {vehicle.get_model()}" for vehicle in user_vehicles if vehicle.get_id_vehicle_type() == slot_vehicle_type_id])
+        if self.user_vehicles_cmb.count() == 0:
             self.buttonBox = QDialogButtonBox(QDialogButtonBox.Cancel)
             self.buttonBox.setCenterButtons(True)
             self.buttonBox.rejected.connect(self.reject)
 
 
-        self.layout.addWidget(self.user_category_cmb)
+        self.layout.addWidget(self.user_vehicles_cmb)
 
-        self.layout.addWidget(QLabel("<b>Amount: " + amount + "€</b>"))
+        self.layout.addWidget(QLabel("<b>Amount: " + amount + "</b>"))
 
         self.layout.addSpacing(20)
 
@@ -158,7 +158,7 @@ class BookingDialog(QDialog):
 
 
     def selected_vehicle(self):
-        return self.user_category_cmb.currentText()
+        return self.user_vehicles_cmb.currentText()
 
 
 
@@ -168,7 +168,7 @@ class Park(QWidget):
         super().__init__()
         self.https_session = https_session
         self.user = user
-        self.initUI()
+        Park.initUI(self)
 
     def initUI(self):
         self.table_signal = Table_signal()
@@ -178,14 +178,15 @@ class Park(QWidget):
 
         hbox = QHBoxLayout()
 
-        h_vbox = QVBoxLayout()
-        h_vbox.addWidget(QLabel("Parking lots: "), 1, Qt.AlignBottom)
+        self.h_vbox = QVBoxLayout()
+        self.h_vbox.setSpacing(0)
+        self.h_vbox.addWidget(QLabel("Parking lots: "), 1, Qt.AlignBottom)
         self.parking_lots_list = QListWidget()
         self.parking_lots_list.setStyleSheet("font: 11pt Arial;")
         self.parking_lots_list.currentItemChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], True))
-        h_vbox.addWidget(self.parking_lots_list, 2, Qt.AlignTop)
+        self.h_vbox.addWidget(self.parking_lots_list, 2, Qt.AlignTop)
 
-        hbox.addLayout(h_vbox, 1)
+        hbox.addLayout(self.h_vbox, 1)
 
         vbox = QVBoxLayout()
 
@@ -210,7 +211,7 @@ class Park(QWidget):
         self.cal = QCalendarWidget(self)
         self.cal.setGridVisible(True)
         #self.cal.setMinimumDate(QDate.currentDate())		# not show previous days
-        self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))
+
 
         hbox.addLayout(vbox, 10)
 
@@ -225,6 +226,9 @@ class Park(QWidget):
         self.get_parking_lots()
         #self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()]["id"])
 
+        if self.parking_lots:
+            self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))
+
         self.setWindowTitle("Park")
         #self.full_screen()
         self.show()
@@ -237,11 +241,12 @@ class Park(QWidget):
 
     # get info on parking lots
     def get_parking_lots(self):
-
+        self.parking_lots_list.clear()
         response = make_http_request(self.https_session, "get", "parking_lots")
-        if response:
+        if response.json():
             self.parking_lots = [ParkingLot(**parking_lots) for parking_lots in response.json()]
         else:
+            self.parking_lots = []
             return
 
         if self.parking_lots:                       # if list is empty -> false
@@ -250,13 +255,13 @@ class Park(QWidget):
                 self.parking_lots_list.addItem(parking_lot.get_name().capitalize())
                 # get info on parking slots of parking lot
                 response = make_http_request(self.https_session, "get", "parking_lots/" + str(parking_lot.get_id()) + "/parking_slots")
-                if response:
+                if response.json():
                     parking_lot.set_parking_slots([ParkingSlot(**parking_slot) for parking_slot in response.json()])
             #print(self.parking_lots)
 
             # get info on vehicle type of parking_slots
             response = make_http_request(self.https_session, "get", "vehicle_types")
-            if response:
+            if response.json():
                 self.vehicle_types = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
             #print(self.vehicle_types)
 
@@ -308,7 +313,7 @@ class Park(QWidget):
         bookings_start_datetime = datetime_to_UTC(day, "00:00", True)     #is_query = True
         bookings_end_datetime = datetime_to_UTC(day, "23:59", True)   # 23:59 for include bookings of time xx:45, 23:45 is enough
         # bookings_start_datetime could be different from bookings_end_datetime (max 1 day)
-        print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())
+        #print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())
 
         response = make_http_request(self.https_session, "get", "bookings", params = {"since":bookings_start_datetime, "until":bookings_end_datetime, "id_parking_lot":self.parking_lot.get_id()})
         if response.json():
@@ -369,7 +374,7 @@ class Park(QWidget):
         user_category_id = self.user.get_id_user_category()
         # obtain user_categories
         response = make_http_request(self.https_session, "get", "user_categories")
-        if response:
+        if response.json():
             user_categories = [UserCategory(**user_category) for user_category in response.json()]
 
         if user_categories:             # not empty
@@ -382,7 +387,7 @@ class Park(QWidget):
 
         # obtain hourly rates and filter
         response = make_http_request(self.https_session, "get", "hourly_rates")
-        if response:
+        if response.json():
             hourly_rates = [HourlyRate(**hourly_rate) for hourly_rate in response.json()]
 
         if hourly_rates:
@@ -414,6 +419,14 @@ class Park(QWidget):
 
 
     def make_booking(self, parking_slot_number, start_time, end_time):
+        if user_is_admin(self.user, self.https_session):
+            QMessageBox.information(self, "uPark tip", "Admin can't make bookings!")
+            return
+
+        if not self.parking_lots:
+            QMessageBox.information(self, "uPark tip", "There aren't parking lots for your category!")
+            return
+
         print("********************")
         day = str(self.cal.selectedDate().toString(Qt.ISODate))
 
@@ -427,7 +440,7 @@ class Park(QWidget):
         booking_duration = (datetime.strptime(f"{utc_end_datetime_string}", "%Y-%m-%d %H:%M:%S") - datetime.strptime(f"{utc_start_datetime_string}", "%Y-%m-%d %H:%M:%S"))
 
         response = make_http_request(self.https_session, "get", "users/" + str(self.user.get_id()) + "/vehicles")
-        if response:
+        if response.json():
             user_vehicles = [Vehicle(**user_vehicle) for user_vehicle in response.json()]
         else:
             user_vehicles = []
@@ -477,13 +490,14 @@ class Park(QWidget):
                         }
 
             response = make_http_request(self.https_session, "post", "users/" + str(self.user.get_id()) + "/bookings", json = booking)
-            if response:
+            if response.json():
                 json_response = response.json()
                 QMessageBox.information(self, "Booking response", json_response["message"] + "\nPrice: " + str(json_response["amount"]))
                 self.get_bookings(self.parking_lot, False)
 
     def showEvent(self, event):
-        self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False)
+        if self.parking_lots_list:
+            self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False)
 
 # if __name__ == '__main__':
 #     app = QApplication(sys.argv)

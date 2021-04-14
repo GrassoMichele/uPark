@@ -84,7 +84,7 @@ class AddVehicleDialog(QDialog):
                 }
 
                 response = make_http_request(self.https_session, "post", "users/" + str(self.id_user) + "/vehicles", json = vehicle )
-                if response:
+                if response.json():
                     QMessageBox.information(self, "Server response", response.json()["message"])
                     #close the dialog and sets its result code to 0, emit the finished signal
                     self.done(0)
@@ -187,7 +187,7 @@ class UserVehicles(QWidget):
 
     def get_user_vehicles(self):
         response = make_http_request(self.https_session, "get", "users/" + str(self.user.get_id()) + "/vehicles")
-        if response:
+        if response.json():
             self.user_vehicles = [Vehicle(**user_vehicle) for user_vehicle in response.json()]
         else:
             self.user_vehicles = []
@@ -195,7 +195,7 @@ class UserVehicles(QWidget):
 
     def get_vehicle_types(self):
         response = make_http_request(self.https_session, "get", "vehicle_types")
-        if response:
+        if response.json():
             self.vehicle_types = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
         else:
             self.vehicle_types = []

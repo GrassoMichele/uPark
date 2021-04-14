@@ -44,6 +44,11 @@ class Login(QWidget):
         self.password_le = QLineEdit()
         self.password_le.setEchoMode(QLineEdit.Password)
 
+        #TO DELETE!!!!
+        self.email_le.setText("admin@admin")
+        self.password_le.setText("admin")
+
+
         self.password_eye_btn = QPushButton(QIcon("utility/pictures/eye.svg"),"")
         self.password_eye_btn.clicked.connect(self.show_password)
 
@@ -108,6 +113,7 @@ class Login(QWidget):
 
                     if user.get_id_user_category() == admin_id:
                         self.admin_dashboard = AdminDashboard(user)
+                        self.admin_dashboard.signal.close.connect(self.signals.logout.emit)
                     else:
                         self.user_dashboard = UserDashboard(user)
                         self.user_dashboard.signal.close.connect(self.signals.logout.emit)
