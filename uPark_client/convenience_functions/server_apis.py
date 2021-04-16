@@ -18,6 +18,7 @@ def make_http_request(http_session, method, relative_uri, json=None, params=None
             QMessageBox.critical(None, "Alert", message)
         return None
 
+
 def user_is_admin(user, https_session):
     response = make_http_request(https_session, "get", "user_categories")
     if response.json():

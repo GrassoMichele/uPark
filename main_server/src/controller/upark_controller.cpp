@@ -157,7 +157,7 @@ void UParkController::handleGet(http_request request) {
             handler_auth(request, false, &get_ns::parking_lot_id_parking_slots);
         }
 
-        // GET bookings?since=yyyy-mm-ddThh_mm_dd&until=yyyy-mm-ddThh_mm_dd&id_user=x&id_parking_lot=x
+        // GET bookings?since=yyyy-mm-ddThh_mm_ss&until=yyyy-mm-ddThh_mm_ss&id_user=x&id_parking_lot=x
         else if (path[0] == "bookings" && path.size() == 1) {
             handler_auth(request, false, &get_ns::bookings);
         }
@@ -204,6 +204,12 @@ void UParkController::handlePut(http_request request) {
         else if (path[0] == "parking_lots" && path.size() == 2){
             //JSON: {"name": "x", "slots_reserved_disability":{"number":true, "number":false}, "slots_reserved_per_vehicle_types": {"id_vehicle_type":[numbers], ... ,}, "categories_allowed":{"id_user_categories":true, "id_user_categories":false}
             handler_auth(request, true, &put_ns::parking_lots_id);
+        }
+
+        // PUT user_categories/{id_user_category}
+        else if (path[0] == "user_categories" && path.size() == 2){
+            //JSON: {"id_hourly_rate": x, "service_validity_start": "yyyy-mm-dd hh_mm_ss", "service_validity_end": "yyyy-mm-dd hh_mm_ss"}
+            handler_auth(request, true, &put_ns::user_categories_id);
         }
 
         else {

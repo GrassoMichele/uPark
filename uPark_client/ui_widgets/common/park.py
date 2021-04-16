@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import QWidget, QCalendarWidget, QLabel, QApplication, QHBoxLayout, QMessageBox, QListWidget, \
                              QVBoxLayout, QTableWidget, QAbstractItemView, QDesktopWidget, QTableWidgetItem, \
                              QDialog, QDialogButtonBox, QComboBox
-from PyQt5.QtCore import QDate, Qt, QObject, pyqtSignal
+from PyQt5.QtCore import QDate, Qt, QObject, pyqtSignal, QMetaMethod
 from PyQt5.QtGui import QBrush, QColor
 
 import sys
@@ -21,6 +21,7 @@ from entities.vehicle_type import VehicleType
 from entities.booking import Booking
 from entities.hourly_rate import HourlyRate
 from entities.vehicle import Vehicle
+
 
 class Table_signal(QObject):
     message = pyqtSignal(int,str, str)      # parking_slot_number, start_time, end_time
@@ -99,12 +100,11 @@ class Bookings_table(QTableWidget):
 
 
     def item_paint(self, row_index, col_index, color, deactivate = True):
+
         self.setItem(row_index, col_index, QTableWidgetItem(""))
         cell = self.item(row_index, col_index)
-        cell.setBackground(QBrush(QColor(color)))
 
-        if deactivate == True:                                  # always true unless when disable user
-            cell.setFlags(Qt.NoItemFlags)                       # cell no selectable, editable, ecc.
+        cell.setBackground(QBrush(QColor(color)))
 
         # colors handling
         if color == self.cells_colors["other_bookings"]:
@@ -115,6 +115,9 @@ class Bookings_table(QTableWidget):
             cell.setToolTip("Time interval between one booking and another")
         elif color == self.cells_colors["disability"]:
             cell.setToolTip("Parking slot reserved for disability.")
+
+        if deactivate == True:                                  # always true unless when disable user
+            cell.setFlags(Qt.NoItemFlags)                       # cell no selectable, editable, ecc.
 
 
 
@@ -146,7 +149,6 @@ class BookingDialog(QDialog):
             self.buttonBox.setCenterButtons(True)
             self.buttonBox.rejected.connect(self.reject)
 
-
         self.layout.addWidget(self.user_vehicles_cmb)
 
         self.layout.addWidget(QLabel("<b>Amount: " + amount + "</b>"))
@@ -161,7 +163,6 @@ class BookingDialog(QDialog):
         return self.user_vehicles_cmb.currentText()
 
 
-
 class Park(QWidget):
 
     def __init__(self, https_session, user):
@@ -174,21 +175,7 @@ class Park(QWidget):
         self.table_signal = Table_signal()
         self.table_signal.message.connect(self.make_booking)
 
-        vbox0 = QVBoxLayout(self)
-
-        hbox = QHBoxLayout()
-
-        self.h_vbox = QVBoxLayout()
-        self.h_vbox.setSpacing(0)
-        self.h_vbox.addWidget(QLabel("Parking lots: "), 1, Qt.AlignBottom)
-        self.parking_lots_list = QListWidget()
-        self.parking_lots_list.setStyleSheet("font: 11pt Arial;")
-        self.parking_lots_list.currentItemChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], True))
-        self.h_vbox.addWidget(self.parking_lots_list, 2, Qt.AlignTop)
-
-        hbox.addLayout(self.h_vbox, 1)
-
-        vbox = QVBoxLayout()
+        vbox_main = QVBoxLayout(self)
 
         table_hbox = QHBoxLayout()
         self.tableWidget = Bookings_table(50,96, self, self.table_signal)           # 50 should be the parking lot number of slots
@@ -206,28 +193,40 @@ class Park(QWidget):
         self.tableWidget.verticalScrollBar().valueChanged.connect(self.vehicle_types_table.verticalScrollBar().setValue);
         self.vehicle_types_table.verticalScrollBar().valueChanged.connect(self.tableWidget.verticalScrollBar().setValue);
 
-        vbox.addLayout(table_hbox, 10)
+        self.pl_vbox = QVBoxLayout()
+        self.pl_vbox.setSpacing(0)
+        name_lbl = QLabel("Parking lots: ")
+        name_lbl.setStyleSheet("font-size: 14px;")
+        self.pl_vbox.addWidget(name_lbl, 1, Qt.AlignBottom)
+        self.parking_lots_list = QListWidget()
+        self.parking_lots_list.setStyleSheet("font: 11pt Arial;")
+        self.parking_lots_list.setMinimumHeight(150)
+        self.parking_lots_list.currentItemChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], True))
+        self.pl_vbox.addWidget(self.parking_lots_list, 2, Qt.AlignTop)
+
+        bottom_hbox = QHBoxLayout()
+        bottom_hbox.addStretch(1)
+        bottom_hbox.addLayout(self.pl_vbox, 1)
+        bottom_hbox.addStretch(1)
 
         self.cal = QCalendarWidget(self)
         self.cal.setGridVisible(True)
         #self.cal.setMinimumDate(QDate.currentDate())		# not show previous days
 
+        bottom_hbox.addWidget(self.cal, 1)
+        bottom_hbox.addStretch(1)
 
-        hbox.addLayout(vbox, 10)
+        #hbox.addLayout(vbox, 10)
 
         text = QLabel("Park")
         text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
-        vbox0.addWidget(text, 1, Qt.AlignTop | Qt.AlignHCenter)
+        vbox_main.addWidget(text, 2, Qt.AlignTop | Qt.AlignHCenter)
 
-        vbox0.addLayout(hbox, 5)
-        vbox0.addWidget(self.cal, 5, Qt.AlignHCenter)
-        self.setLayout(vbox0)
-
-        self.get_parking_lots()
-        #self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()]["id"])
-
-        if self.parking_lots:
-            self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))
+        vbox_main.addLayout(table_hbox, 10)
+        vbox_main.addStretch(2)
+        vbox_main.addLayout(bottom_hbox, 6)
+        vbox_main.addStretch(2)
+        self.setLayout(vbox_main)
 
         self.setWindowTitle("Park")
         #self.full_screen()
@@ -361,10 +360,13 @@ class Park(QWidget):
                     self.tableWidget.item_paint(table_row_index, i, color)
 
                 # deny bookings 15 minutes before and after existing bookings
+                deactivate = not (booking.get_id_user() == self.user.get_id())
                 if (start_table_col_index > 0):
-                    self.tableWidget.item_paint(table_row_index, start_table_col_index-1, self.tableWidget.cells_colors["bookings_separation"])
+                    if self.tableWidget.item(table_row_index, start_table_col_index-1) == None:
+                        self.tableWidget.item_paint(table_row_index, start_table_col_index-1, self.tableWidget.cells_colors["bookings_separation"], deactivate)
                 if (end_table_col_index < 96):
-                    self.tableWidget.item_paint(table_row_index, end_table_col_index, self.tableWidget.cells_colors["bookings_separation"])
+                    if self.tableWidget.item(table_row_index, end_table_col_index) == None:
+                        self.tableWidget.item_paint(table_row_index, end_table_col_index, self.tableWidget.cells_colors["bookings_separation"], deactivate)
 
 
     def get_booking_amount(self, utc_start_datetime_string, utc_end_datetime_string, slot_vehicle_type_id):
@@ -490,16 +492,18 @@ class Park(QWidget):
                         }
 
             response = make_http_request(self.https_session, "post", "users/" + str(self.user.get_id()) + "/bookings", json = booking)
-            if response.json():
+            if response:
                 json_response = response.json()
                 QMessageBox.information(self, "Booking response", json_response["message"] + "\nPrice: " + str(json_response["amount"]))
                 self.get_bookings(self.parking_lot, False)
 
     def showEvent(self, event):
+        self.get_parking_lots()
         if self.parking_lots_list:
+            self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))
             self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False)
-
-# if __name__ == '__main__':
-#     app = QApplication(sys.argv)
-#     parcheggia = Park()
-#     sys.exit(app.exec_())
+        else:
+            try:
+                self.cal.disconnect()
+            except:
+                pass

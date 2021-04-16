@@ -9,13 +9,13 @@ from datetime import timedelta, datetime, timezone
 
 from convenience_functions.server_apis import make_http_request, user_is_admin
 from convenience_functions.datetime_management import datetime_UTC_to_local
+
 from entities.user import User
 from entities.parking_lot import ParkingLot
 from entities.parking_slot import ParkingSlot
-
 from entities.booking import Booking
-
 from entities.vehicle import Vehicle
+
 
 class DetailsDialog(QDialog):
     def __init__(self, user, booking, vehicle_info, parking_slot_info, https_session, only_expired, parent = None):
@@ -85,7 +85,12 @@ class Bookings(QWidget):
 
     def initUI(self):
 
+        self.is_admin = False
         booking_info = ["Datetime start", "Datetime end", "License plate", "Parking lot", "Slot number"]
+
+        if user_is_admin(self.user, self.https_session):
+            self.is_admin = True
+            booking_info.insert(3, "User")
 
         vbox = QVBoxLayout()
 
@@ -104,22 +109,17 @@ class Bookings(QWidget):
         vbox.addWidget(self.user_bookings_table, 9)
 
         vbox.addStretch(1)
-        #vbox.setStretchFactor(self.user_bookings_table, 5)
 
         self.setLayout(vbox)
 
-        self.get_user_vehicles()
-        self.get_parking_lots()
-        #self.get_user_bookings()
         window_title = "Bookings in progress" if self.only_in_progress else "Bookings expired" if self.only_expired else "Bookings"
 
         self.setWindowTitle(window_title)
         self.show()
 
 
-
     def get_user_vehicles(self):
-        if user_is_admin(self.user, self.https_session):
+        if self.is_admin:
             request_relative_uri = "vehicles"
         else:
             request_relative_uri = "users/" + str(self.user.get_id()) + "/vehicles"
@@ -144,7 +144,6 @@ class Bookings(QWidget):
                 return vehicle
 
 
-
     def get_parking_lots(self):
         response = make_http_request(self.https_session, "get", "parking_lots")
         if response.json():
@@ -163,18 +162,32 @@ class Bookings(QWidget):
 
 
     def get_parking_slot_info(self, id_parking_slot):
-        if self.parking_lots:
-            for parking_lot in self.parking_lots:
-                try:
-                    parking_lot_slots = parking_lot.get_parking_slots()
-                    slot_index = parking_lot_slots.index(ParkingSlot(id = id_parking_slot))
-                    slot = parking_lot_slots[slot_index]
-                    # get parking lot name, street and parking slot number
-                    return (parking_lot.get_name(), parking_lot.get_street(), slot.get_number())
-                except ValueError:
-                    continue
+        for parking_lot in self.parking_lots:
+            try:
+                parking_lot_slots = parking_lot.get_parking_slots()
+                slot_index = parking_lot_slots.index(ParkingSlot(id = id_parking_slot))
+                slot = parking_lot_slots[slot_index]
+                # get parking lot name, street and parking slot number
+                return (parking_lot.get_name(), parking_lot.get_street(), slot.get_number())
+            except ValueError:
+                continue
+        return ("N/A","N/A","N/A")
+
+
+    def get_users(self):
+        response = make_http_request(self.https_session, "get", "users")
+        if response.json():
+            self.users = [User(**user) for user in response.json()]
         else:
-            return ("N/A","N/A","N/A")
+            self.users = []
+
+
+    def get_user_email(self, id_user):
+        try:
+            user_index = self.users.index(User(id = id_user))
+            return self.users[user_index].get_email()
+        except ValueError:
+            return "N/A"
 
 
     def get_user_bookings(self):
@@ -192,7 +205,7 @@ class Bookings(QWidget):
         else:
             pass                 #with no params set all bookings will be returned
 
-        if not user_is_admin(self.user, self.https_session):
+        if not self.is_admin:
             params["id_user"] = self.user.get_id()
 
         response = make_http_request(self.https_session, "get", "bookings", params = params)
@@ -205,19 +218,32 @@ class Bookings(QWidget):
                 #print(booking)
                 booking_methods = [booking.get_datetime_start, booking.get_datetime_end, self.get_vehicle_info, self.get_parking_slot_info]
 
+                if self.is_admin:
+                    booking_methods.insert(3, self.get_user_email)
+
                 # from UTC to local timezone
                 booking.set_datetime_start(datetime_UTC_to_local(booking.get_datetime_start()))
                 booking.set_datetime_end(datetime_UTC_to_local(booking.get_datetime_end()))
 
                 self.user_bookings_table.insertRow(i)
-                for j in range(self.user_bookings_table.columnCount()):
+                for j in range(self.user_bookings_table.columnCount() - 1):
                     method = booking_methods[j]
                     if j in [0,1]:
                         item = QTableWidgetItem(method())
                         item.setTextAlignment(Qt.AlignCenter)
                         self.user_bookings_table.setItem(i, j, item)
                     elif j == 2:
-                        item = QTableWidgetItem(method(booking.get_id_vehicle(), only_license_plate = True))
+                        license_plate = method(booking.get_id_vehicle(), only_license_plate = True)
+                        item = QTableWidgetItem(license_plate if license_plate else "N/A")
+                        item.setTextAlignment(Qt.AlignCenter)
+                        self.user_bookings_table.setItem(i, j, item)
+                    elif j == 3 and self.is_admin:
+                        vehicle = self.get_vehicle_info(booking.get_id_vehicle())
+                        if vehicle:
+                            id_user = vehicle.get_id_user()
+                            item = QTableWidgetItem(method(id_user))
+                        else:
+                            item = QTableWidgetItem("N/A")
                         item.setTextAlignment(Qt.AlignCenter)
                         self.user_bookings_table.setItem(i, j, item)
                     else:
@@ -234,7 +260,7 @@ class Bookings(QWidget):
 
         for row in range(self.user_bookings_table.rowCount()):
             item = QPushButton("Show")
-            self.user_bookings_table.setCellWidget(row, 5, item)
+            self.user_bookings_table.setCellWidget(row, self.user_bookings_table.columnCount()-1, item)
             item.clicked.connect(lambda _,row=row: self.show_booking_details(row))
 
 
@@ -250,4 +276,8 @@ class Bookings(QWidget):
             self.get_user_bookings()
 
     def showEvent(self, event):
+        self.get_user_vehicles()
+        self.get_parking_lots()
+        if self.is_admin:
+            self.get_users()
         self.get_user_bookings()

@@ -164,6 +164,7 @@ void post_ns::parking_lot(const web::http::http_request& request, const web::jso
     json::value response = json::value::object(true);
 
     int num_parking_slots = json_request.at("num_parking_slots").as_number().to_int64();
+    int vehicle_type_id = json_request.at("vehicle_type_id").as_number().to_int64();
 
     if (requesting_user_category == "Admin"){
 
@@ -194,7 +195,7 @@ void post_ns::parking_lot(const web::http::http_request& request, const web::jso
                 0,
                 i+1,                    // parking slot number starts from 1
                 parking_lot_id,
-                1,                      // default vehicle: type car
+                vehicle_type_id,        // default slots vehicle type chosen by user at parking lot creation time
                 false                   // default: not disability
             );
             mapperPS.Create(ps);
@@ -210,7 +211,9 @@ void post_ns::parking_lot(const web::http::http_request& request, const web::jso
     }
 }
 
-bool booking_time_overlapping_check(const time_t, const time_t, const Booking&);
+
+bool booking_time_overlapping_check(const time_t, const time_t, const int, const int, const Booking&);
+
 
 // POST users/{id_user}/bookings
 void post_ns::users_id_bookings(const web::http::http_request& request, const web::json::value& json_request, const User& authenticated_user){
@@ -338,13 +341,13 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
 
     std::vector<Booking>::iterator it_b;
 
-    it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time](const Booking& b)
+    it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time, &requested_user_id, &id_vehicle](const Booking& b)
     {
-        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, b);
+        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, requested_user_id, id_vehicle, b);
     });
 
     if (it_b != std::end(bookings)){
-        request.reply(status_codes::BadRequest, "Booking conflicts with an existing one!");
+        request.reply(status_codes::BadRequest, "Booking conflicts with an existing one or you're not using the same vehicle to extend an existing booking!");
         return;
     }
 
@@ -358,9 +361,9 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         }), bookings.end());
 
 
-    it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time](const Booking& b)
+    it_b = std::find_if(std::begin(bookings), std::end(bookings), [&datetime_start_time, &datetime_end_time, &requested_user_id, &id_vehicle](const Booking& b)
     {
-        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, b);
+        return booking_time_overlapping_check(datetime_start_time, datetime_end_time, requested_user_id, id_vehicle, b);
     });
 
     if (it_b != std::end(bookings)){
@@ -530,7 +533,7 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
 
 
 // function that checks for booking overlapping temporally
-bool booking_time_overlapping_check(const time_t datetime_start_time, const time_t datetime_end_time, const Booking& b) {
+bool booking_time_overlapping_check(const time_t datetime_start_time, const time_t datetime_end_time, const int requested_user_id, const int id_vehicle, const Booking& b) {
     //existing booking start_time ad end_time from string to time_t
     struct tm existing_b_start_struct;
     std::istringstream bdts(b.getDateTimeStart());
@@ -542,19 +545,28 @@ bool booking_time_overlapping_check(const time_t datetime_start_time, const time
     bdte >> std::get_time(&existing_b_end_struct, "%Y-%m-%d %T");
     time_t existing_b_end_time = timegm(&existing_b_end_struct);
 
+    int time_between_bookings = requested_user_id == b.getIdUser() ? 0 : (15*60);             // 0 to allow same user to make contiguous bookings
+
     //cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
-    if (difftime((datetime_start_time - (15 * 60)), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
+    if (difftime((datetime_start_time - time_between_bookings), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
         return true;
     }
     //cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
-    else if (difftime((datetime_end_time + (15 * 60)), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
+    else if (difftime((datetime_end_time + time_between_bookings), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
         return true;
     }
     //cheking if existing booking is overlapping with the requested booking
     else if (difftime(existing_b_start_time, datetime_start_time) == 0 && difftime(existing_b_end_time, datetime_end_time) == 0){
         return true;
     }
-    else{
-        return false;
+    // next two checks are for avoid that the a user can make contiguous bookings with different vehicles
+    else if (time_between_bookings==0 && difftime(datetime_start_time, existing_b_end_time) == 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
+        if (id_vehicle != b.getIdVehicle())
+            return true;
     }
+    else if (time_between_bookings==0 && difftime(datetime_end_time, existing_b_start_time) == 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
+        if (id_vehicle != b.getIdVehicle())
+            return true;
+    }
+    return false;
 }

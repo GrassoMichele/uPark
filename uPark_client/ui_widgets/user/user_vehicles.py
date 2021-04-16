@@ -5,12 +5,12 @@ from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QAbstractItemView, QPu
 
 from PyQt5.QtCore import Qt
 
-
 from convenience_functions.server_apis import make_http_request
 from entities.user import User
 
 from entities.vehicle import Vehicle
 from entities.vehicle_type import VehicleType
+
 
 class AddVehicleDialog(QDialog):
     def __init__(self, https_session, id_user, vehicle_types, parent=None):
@@ -53,7 +53,6 @@ class AddVehicleDialog(QDialog):
             self.buttonBox = QDialogButtonBox(QDialogButtonBox.Cancel)
             self.buttonBox.setCenterButtons(True)
             self.buttonBox.rejected.connect(self.reject)
-
 
         self.layout.addWidget(self.vehicle_type_cmb)
 
@@ -136,6 +135,7 @@ class UserVehicles(QWidget):
         self.get_vehicle_types()
 
         self.user_vehicle_types_id = {vehicle.get_id_vehicle_type() for vehicle in self.user_vehicles}
+        self.user_vehicle_types_id = sorted(self.user_vehicle_types_id)
 
         for vehicle_type_id in self.user_vehicle_types_id:
             try:

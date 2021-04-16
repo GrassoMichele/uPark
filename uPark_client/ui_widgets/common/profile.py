@@ -6,12 +6,12 @@ from PyQt5.QtCore import Qt
 
 from PyQt5.QtGui import QPixmap
 
-
 from convenience_functions.server_apis import make_http_request, user_is_admin
 
 from entities.user import User
 from entities.user_category import UserCategory
 
+import requests
 
 
 class Profile(QWidget):
@@ -34,7 +34,6 @@ class Profile(QWidget):
         text = QLabel(title)
         text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
         vbox_main.addWidget(text, 1, Qt.AlignTop | Qt.AlignHCenter)
-
 
         vbox_info = QVBoxLayout()
         vbox_info.setSpacing(10)
@@ -75,7 +74,13 @@ class Profile(QWidget):
 
         wallet_lbl_name = "<b>Wallet: </b>" if not user_is_admin(self.user, self.https_session) else "<b>uPark Income: </b>"
         self.form_layout.addRow(wallet_lbl_name, self.wallet_lbl)
-        self.form_layout.addRow("<b>Disability: </b>", QLabel(str(self.user.get_disability())))
+
+        self.disability_lbl = QLabel(str(self.user.get_disability()))
+        self.form_layout.addRow("<b>Disability: </b>", self.disability_lbl)
+
+        self.active_account_lbl = QLabel(str(self.user.get_active_account()))
+        self.form_layout.addRow("<b>Active account: </b>", self.active_account_lbl)
+
         self.form_layout.addRow("<b>Category: </b>", QLabel(self.get_user_category_name()))
 
         vbox_info.addLayout(self.form_layout, 5)
@@ -113,19 +118,20 @@ class Profile(QWidget):
     def update_password(self):
         text, ok = QInputDialog.getText(self, "Update password", "New password: ", QLineEdit.Normal)
         new_password = str(text)
-        if ok and len(new_password) != 0:
+        if ok and len(new_password) < 8:
             # https request
             response = make_http_request(self.https_session, "put", "users/" + str(self.user.get_id()), json = {"password":new_password})
             if response:
                 QMessageBox.information(self, "Server response", response.text)
                 self.user.set_password(new_password)
+                self.https_session.auth = (self.user.get_email(), new_password)
 
                 # update info
                 self.password_lbl.setText(f"{new_password[0]}{'*'*(len(new_password)-2)}{new_password[-1]}")
 
             #print(new_password)
         elif ok and len(new_password) == 0:
-            QMessageBox.information(self, "uPark tip", "Password should not be blank!")
+            QMessageBox.information(self, "uPark tip", "Password must contains at least 8 characters!")
 
 
     def add_money(self):
@@ -145,3 +151,27 @@ class Profile(QWidget):
             #print(new_password)
         elif ok and len(new_password) == 0:
             QMessageBox.information(self, "uPark tip", "Password should not be blank!")
+
+
+    def refresh(self):
+        response = make_http_request(self.https_session, "get", "users/" + str(self.user.get_id()))
+        if response.json():
+            self.user = User(**response.json())
+            # password
+            password = self.user.get_password()
+            password_hidden = f"{password[0]}{'*'*(len(password)-2)}{password[-1]}"
+            if password_hidden != self.password_lbl.text():
+                self.password_lbl.setText(password_hidden)
+            # wallet
+            if self.user.get_wallet() != self.wallet_lbl.text():
+                self.wallet_lbl.setText(self.user.get_wallet())
+            # disability
+            if self.user.get_disability() != self.disability_lbl.text():
+                self.disability_lbl.setText(str(self.user.get_disability()))
+            # active account
+            if self.user.get_active_account() != self.active_account_lbl.text():
+                self.active_account_lbl.setText(str(self.user.get_active_account()))
+
+
+    def showEvent(self, event):
+        self.refresh()

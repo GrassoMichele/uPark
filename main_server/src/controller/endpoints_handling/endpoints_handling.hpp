@@ -46,7 +46,7 @@ namespace post_ns {
 
     // POST users/{id_user}/bookings
     void users_id_bookings(const web::http::http_request&, const web::json::value&, const User&);
-    
+
     // POST crossing
     void crossing(const web::http::http_request&, const web::json::value&, const User&);
 }
@@ -107,6 +107,9 @@ namespace put_ns {
 
     // PUT parking_lots/{id}
     void parking_lots_id(const web::http::http_request&, const web::json::value&, const User&);
+
+    // PUT user_categories/{id_user_category}
+    void user_categories_id(const web::http::http_request&, const web::json::value&, const User&);
 }
 
 namespace delete_ns {

@@ -10,9 +10,10 @@ from entities.user_category import UserCategory
 from ..common.park import Park
 
 class AddDialog(QDialog):
-    def __init__(self, https_session, parent=None):
+    def __init__(self, https_session, vehicle_types, parent=None):
         super().__init__(parent=parent)
         self.https_session = https_session
+        self.vehicle_types = vehicle_types
 
         self.setWindowTitle("Add Parking Lot")
 
@@ -24,7 +25,7 @@ class AddDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        layout.addWidget(QLabel("<b><i>Please, new parking lot info</i></b>"), 0, Qt.AlignCenter)
+        layout.addWidget(QLabel("<b><i>Please, insert new parking lot info</i></b>"), 0, Qt.AlignCenter)
         layout.addWidget(QLabel("<b><i>Parking lot info: </i></b>"), 0, Qt.AlignCenter)
 
         form_layout = QFormLayout()
@@ -33,9 +34,14 @@ class AddDialog(QDialog):
         self.street_le = QLineEdit()
         self.num_parking_slots = QLineEdit()
 
+        # combobox
+        self.vehicle_types_cmb = QComboBox()
+        self.vehicle_types_cmb.addItems([vehicle_type.get_name() for vehicle_type in self.vehicle_types])
+
         form_layout.addRow("<b>Name: </b> ", self.name_le)
         form_layout.addRow("<b>Street: </b> ",  self.street_le)
         form_layout.addRow("<b>#N. Parking slots: </b>",  self.num_parking_slots)
+        form_layout.addRow("<b>Slots default vehicle type: </b>", self.vehicle_types_cmb)
 
         layout.addLayout(form_layout)
 
@@ -47,18 +53,26 @@ class AddDialog(QDialog):
 
     def add_parking_lot(self):
 
-        parking_lot = {
-                        "name": self.name_le.text(),
-                        "street": self.street_le.text(),
-                        "num_parking_slots": int(self.num_parking_slots.text())
-                        }
+        index = self.vehicle_types_cmb.currentIndex()
+        if index != -1:             # -1 means empty qcombobox (no items)
+            vehicle_type_id = self.vehicle_types[index].get_id()
 
-        response = make_http_request(self.https_session, "post", "parking_lots", json = parking_lot)
-        if response.json():
-            QMessageBox.information(self, "Server response", response.json()["message"])
-            self.done(0)
+            parking_lot = {
+                            "name": self.name_le.text(),
+                            "street": self.street_le.text(),
+                            "num_parking_slots": int(self.num_parking_slots.text()),
+                            "vehicle_type_id": vehicle_type_id
+                            }
+
+            response = make_http_request(self.https_session, "post", "parking_lots", json = parking_lot)
+            if response.json():
+                QMessageBox.information(self, "Server response", response.json()["message"])
+                self.done(0)
+            else:
+                self.done(1)
         else:
-            self.done(1)
+            QMessageBox.critical(self, "uPark", "No vehicle types available!")
+            return
 
 
 class UpdateDisabilityWidget(QWidget):
@@ -168,6 +182,7 @@ class UpdateVehicleTypesWidget(QWidget):
         vbox_to_assign_slots.addWidget(QLabel("<i>Not assigned slots:</i>"))
 
         self.to_assign_slots_list = QListWidget()
+        self.to_assign_slots_list.setSortingEnabled(True)
         self.to_assign_slots_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         vbox_to_assign_slots.addWidget(self.to_assign_slots_list)
 
@@ -186,6 +201,7 @@ class UpdateVehicleTypesWidget(QWidget):
         vbox_actual_slots.addWidget(QLabel("<i> Slots assigned to:"))
 
         self.actual_slots_list = QListWidget()
+        self.actual_slots_list.setSortingEnabled(True)
         self.actual_slots_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self.vehicle_types_cmb = QComboBox()
@@ -204,6 +220,7 @@ class UpdateVehicleTypesWidget(QWidget):
         self.setLayout(vbox_main)
 
         self.show()
+
 
     def initialize(self):      #create a list for each vehicle type and the list "to assign"  {"to_assing": [], "vehicle_type": [], ... }
         self.parking_slots = {"to_assign": []}
@@ -332,7 +349,7 @@ class EditDialog(QDialog):
                 dict[slot_key] = [slot.get_number() for slot in parking_slots_dict[slot_key]]
 
             parking_lot_info["slots_reserved_per_vehicle_types"] = dict
-        else:
+        elif self.update_vehicle_types_widget.to_assign_slots_list.count() != 0:
             QMessageBox.information(self, "uPark tip", "Please, assign all slots in 'Not assigned slots' section first!")
             return
 
@@ -370,10 +387,11 @@ class Parking(Park):
         hbox.addWidget(delete_btn)
         hbox.addWidget(edit_btn)
         #hbox.setAlignment(Qt.AlignTop)
-        self.h_vbox.addLayout(hbox)
+        self.pl_vbox.addLayout(hbox)
 
         spacer_item = QSpacerItem(1, 1, vPolicy = QSizePolicy.Expanding)
-        self.h_vbox.addSpacerItem(spacer_item)
+        self.pl_vbox.addSpacerItem(spacer_item)
+
 
     def delete_parking_lot(self):
         if self.parking_lots:
@@ -396,12 +414,12 @@ class Parking(Park):
                 return
 
     def show_add_dialog(self):
-        add_dialog = AddDialog(self.https_session, self)
+        add_dialog = AddDialog(self.https_session, self.vehicle_types, self)
 
         if add_dialog.exec_() == 0:
             self.get_parking_lots()
         else:
-            pass
+            return
 
     def show_edit_dialog(self):
         add_dialog = EditDialog(self.https_session, self.parking_lot, self.vehicle_types, self)
@@ -409,4 +427,4 @@ class Parking(Park):
         if add_dialog.exec_() == 0:
             self.get_parking_lots()
         else:
-            pass
+            return

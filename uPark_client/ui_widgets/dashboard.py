@@ -9,8 +9,10 @@ from PyQt5.QtGui import QFont, QBrush, QPalette, QColor
 import sys
 import requests
 
+
 class Dashboard_signal(QObject):
     close = pyqtSignal()
+
 
 class Dashboard(QMainWindow):
 

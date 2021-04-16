@@ -42,6 +42,36 @@ void put_ns::users_id(const http_request& request, const json::value& json_reque
     }
 }
 
+
+// PUT user_categories/{id_user_category}
+void put_ns::user_categories_id(const http_request& request, const json::value& json_request, const User& authenticated_user){
+    User requesting_user = authenticated_user;
+    std::string requesting_user_category = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
+    int requested_user_category_id = std::stoi(uri::split_path(uri::decode(request.relative_uri().path()))[1]);
+
+    if(requesting_user_category == "Admin"){
+
+     UserCategory requested_user_category = mapperUC.Read(requested_user_category_id);
+
+     if(!json_request.at("id_hourly_rate").is_null())
+         requested_user_category.setIdHourlyRate(json_request.at("id_hourly_rate").as_number().to_int64());
+
+     if(!json_request.at("service_validity_start").is_null())
+         requested_user_category.setServiceValidityStart(json_request.at("service_validity_start").as_string());
+
+     if(!json_request.at("service_validity_end").is_null())
+         requested_user_category.setServiceValidityEnd(json_request.at("service_validity_end").as_string());
+
+     mapperUC.Update(requested_user_category);
+     request.reply(status_codes::OK, "User category updated!");
+
+    }
+    else {
+       request.reply(status_codes::Unauthorized, "Only admin can update user categories!");
+    }
+}
+
+
 // PUT vehicle_types/{id}
 void put_ns::vehicle_types_id(const http_request& request, const json::value& json_request, const User& authenticated_user){
     User requesting_user=authenticated_user;
@@ -67,6 +97,7 @@ void put_ns::vehicle_types_id(const http_request& request, const json::value& js
     }
 }
 
+
 // PUT hourly_rates/{id}
 void put_ns::hourly_rates_id(const http_request& request, const json::value& json_request, const User& authenticated_user){
     User requesting_user=authenticated_user;
@@ -88,6 +119,7 @@ void put_ns::hourly_rates_id(const http_request& request, const json::value& jso
         request.reply(status_codes::Unauthorized, "Only admin can update hourly rate!");
     }
 }
+
 
 // PUT parking_lots/{id}
 void put_ns::parking_lots_id(const http_request& request, const json::value& json_request, const User& authenticated_user){
