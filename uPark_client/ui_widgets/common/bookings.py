@@ -7,8 +7,8 @@ from PyQt5.QtCore import Qt
 
 from datetime import timedelta, datetime, timezone
 
-from convenience_functions.server_apis import make_http_request, user_is_admin
-from convenience_functions.datetime_management import datetime_UTC_to_local
+from convenience.server_apis import make_http_request, user_is_admin
+from convenience.datetime_management import datetime_UTC_to_local
 
 from entities.user import User
 from entities.parking_lot import ParkingLot

@@ -3,11 +3,41 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayo
                             QLineEdit, QMessageBox, QSpacerItem, QSizePolicy, QProgressDialog, QTabWidget, QFormLayout, QScrollArea, \
                             QCheckBox, QComboBox, QListWidget, QAbstractItemView
 
-from PyQt5.QtCore import Qt
-from convenience_functions.server_apis import make_http_request
+from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal
+from convenience.server_apis import make_http_request
+from convenience.loading_indicator import LoadingIndicator
 from entities.user_category import UserCategory
 
 from ..common.park import Park
+from time import sleep
+
+
+class LoadingWorker(QObject):
+    finished = pyqtSignal(str)
+    https_session = None
+    #useful to add_worker
+    parking_lot_dict = None
+    #useful to delete_worker
+    parking_lot = None
+
+    def run(self):
+        pass
+
+    def add_worker(self):
+        response = make_http_request(self.https_session, "post", "parking_lots", json = self.parking_lot_dict)
+        if response:
+            self.finished.emit(response.json()["message"])
+        else:
+            self.finished.emit("")
+
+    def delete_worker(self):
+        response = make_http_request(self.https_session, "delete", "parking_lots/" + str(self.parking_lot.get_id()))
+        if response:
+            self.finished.emit(response.text)
+        else:
+            self.finished.emit("")
+
+
 
 class AddDialog(QDialog):
     def __init__(self, https_session, vehicle_types, parent=None):
@@ -19,9 +49,10 @@ class AddDialog(QDialog):
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
-        buttonBox = QDialogButtonBox(QBtn)
-        buttonBox.accepted.connect(self.add_parking_lot)
-        buttonBox.rejected.connect(self.reject)
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.show_loading)
+        self.buttonBox.accepted.connect(self.waiting_for_add_response)
+        self.buttonBox.rejected.connect(self.reject)
 
         layout = QVBoxLayout()
 
@@ -47,13 +78,33 @@ class AddDialog(QDialog):
 
         layout.addSpacing(20)
 
-        layout.addWidget(buttonBox)
+        self.hbox = QHBoxLayout()
+        self.hbox.addWidget(self.buttonBox)
+
+        layout.addLayout(self.hbox)
         self.setLayout(layout)
 
 
-    def add_parking_lot(self):
+    def show_loading(self):
+        self.buttonBox.setEnabled(False)
+        self.loading_indicator = LoadingIndicator()
+        self.hbox.insertWidget(1, self.loading_indicator)
 
+
+    def add_parking_lot(self, message):
+        #to reset the loader
+        self.buttonBox.setEnabled(True)
+        self.loading_indicator.setParent(None)
+
+        if message:
+            QMessageBox.information(self, "Server response", message)
+            self.done(0)
+        else:
+            self.done(1)
+
+    def waiting_for_add_response(self):
         index = self.vehicle_types_cmb.currentIndex()
+
         if index != -1:             # -1 means empty qcombobox (no items)
             vehicle_type_id = self.vehicle_types[index].get_id()
 
@@ -64,15 +115,93 @@ class AddDialog(QDialog):
                             "vehicle_type_id": vehicle_type_id
                             }
 
-            response = make_http_request(self.https_session, "post", "parking_lots", json = parking_lot)
-            if response.json():
-                QMessageBox.information(self, "Server response", response.json()["message"])
-                self.done(0)
-            else:
-                self.done(1)
+            # Create a QThread object
+            self.thread = QThread()
+            # Create a worker object
+            self.worker = LoadingWorker()
+            self.worker.run = self.worker.add_worker
+            self.worker.https_session = self.https_session
+            self.worker.parking_lot_dict = parking_lot
+            # Move worker to the thread
+            self.worker.moveToThread(self.thread)
+
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.add_parking_lot)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+
+            # started signal: emitted from the associated thread when it starts executing
+            self.thread.start()
+
         else:
             QMessageBox.critical(self, "uPark", "No vehicle types available!")
             return
+
+
+class DeleteDialog(QDialog):
+    def __init__(self, https_session, parking_lot, parent=None):
+        super().__init__(parent=parent)
+        self.https_session = https_session
+        self.parking_lot = parking_lot
+
+        self.setWindowTitle("Delete Parking Lot")
+
+        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.show_loading)
+        self.buttonBox.accepted.connect(self.waiting_for_delete_response)
+        self.buttonBox.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+
+        layout.addWidget(QLabel("<i>Are you sure to delete</i><b> " + parking_lot.get_name().capitalize() + " </b><i>parking lot?</i>"), 0, Qt.AlignCenter)
+        layout.addSpacing(20)
+
+        self.hbox = QHBoxLayout()
+        self.hbox.addWidget(self.buttonBox)
+
+        layout.addLayout(self.hbox)
+        self.setLayout(layout)
+
+
+    def show_loading(self):
+        self.buttonBox.setEnabled(False)
+        self.loading_indicator = LoadingIndicator()
+        self.hbox.insertWidget(1, self.loading_indicator)
+
+
+    def delete_parking_lot(self, message):
+        #to reset the loader
+        self.buttonBox.setEnabled(True)
+        self.loading_indicator.setParent(None)
+
+        if message:
+            QMessageBox.information(self, "Server response", message)
+            self.done(0)
+        else:
+            self.done(1)
+
+    def waiting_for_delete_response(self):
+            # Create a QThread object
+            self.thread = QThread()
+            # Create a worker object
+            self.worker = LoadingWorker()
+            self.worker.run = self.worker.delete_worker
+            self.worker.https_session = self.https_session
+            self.worker.parking_lot = self.parking_lot
+            # Move worker to the thread
+            self.worker.moveToThread(self.thread)
+
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.delete_parking_lot)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+
+            # started signal: emitted from the associated thread when it starts executing
+            self.thread.start()
 
 
 class UpdateDisabilityWidget(QWidget):
@@ -117,6 +246,7 @@ class UpdateDisabilityWidget(QWidget):
     def set_checkbox_changed(self):
         self.checkbox_changed = True
 
+
 class UpdateCategoriesWidget(QWidget):
     def __init__(self, user_categories, categories_allowed, parent=None):
         super().__init__(parent=parent)
@@ -159,6 +289,7 @@ class UpdateCategoriesWidget(QWidget):
 
     def set_checkbox_changed(self):
         self.checkbox_changed = True
+
 
 class UpdateVehicleTypesWidget(QWidget):
     def __init__(self, vehicle_types, parking_lot, parent=None):
@@ -365,6 +496,7 @@ class EditDialog(QDialog):
         else:
             self.done(1)
 
+
 class Parking(Park):
 
     def __init__(self, https_session, user):
@@ -378,7 +510,7 @@ class Parking(Park):
         add_btn.clicked.connect(self.show_add_dialog)
 
         delete_btn = QPushButton("-")
-        delete_btn.clicked.connect(self.delete_parking_lot)
+        delete_btn.clicked.connect(self.show_delete_dialog)
 
         edit_btn = QPushButton("Edit")
         edit_btn.clicked.connect(self.show_edit_dialog)
@@ -392,26 +524,15 @@ class Parking(Park):
         spacer_item = QSpacerItem(1, 1, vPolicy = QSizePolicy.Expanding)
         self.pl_vbox.addSpacerItem(spacer_item)
 
-
-    def delete_parking_lot(self):
+    def show_delete_dialog(self):
         if self.parking_lots:
-            #selected_parking_lot = self.parking_lots[self.parking_lots_list.currentRow()]
+            delete_dialog = DeleteDialog(self.https_session, self.parking_lot, self)
 
-            reply = QMessageBox.question(self, 'Delete Parking Lot',
-                                         f"Are you sure to delete {self.parking_lot.get_name()} parking lot?", QMessageBox.Yes |
-                                         QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                # progress_dialog = QProgressDialog()
-                # progress_dialog.setMaximum(100);
-                # progress_dialog.setValue(10)
-                # progress_dialog.show()
-                response = make_http_request(self.https_session, "delete", "parking_lots/" + str(self.parking_lot.get_id()))
-                if response:
-                    #progress_dialog.setValue(100)
-                    QMessageBox.information(self, "Server response", response.text)
-                    self.get_parking_lots()
-            else:
-                return
+            if delete_dialog.exec_() == 0:
+                self.get_parking_lots()
+
+        else:
+            return
 
     def show_add_dialog(self):
         add_dialog = AddDialog(self.https_session, self.vehicle_types, self)

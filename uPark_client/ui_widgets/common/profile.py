@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 
 from PyQt5.QtGui import QPixmap
 
-from convenience_functions.server_apis import make_http_request, user_is_admin
+from convenience.server_apis import make_http_request, user_is_admin
 
 from entities.user import User
 from entities.user_category import UserCategory
@@ -118,7 +118,7 @@ class Profile(QWidget):
     def update_password(self):
         text, ok = QInputDialog.getText(self, "Update password", "New password: ", QLineEdit.Normal)
         new_password = str(text)
-        if ok and len(new_password) < 8:
+        if ok and len(new_password) >= 8:
             # https request
             response = make_http_request(self.https_session, "put", "users/" + str(self.user.get_id()), json = {"password":new_password})
             if response:
@@ -130,7 +130,7 @@ class Profile(QWidget):
                 self.password_lbl.setText(f"{new_password[0]}{'*'*(len(new_password)-2)}{new_password[-1]}")
 
             #print(new_password)
-        elif ok and len(new_password) == 0:
+        elif ok and len(new_password) < 8:
             QMessageBox.information(self, "uPark tip", "Password must contains at least 8 characters!")
 
 

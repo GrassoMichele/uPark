@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox, QFor
 
 from PyQt5.QtCore import Qt
 
-from convenience_functions.server_apis import make_http_request
+from convenience.server_apis import make_http_request
 
 from .add_dialogs import AddHourlyRateDialog, AddVehicleTypeDialog
 

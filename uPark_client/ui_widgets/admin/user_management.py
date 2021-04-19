@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QTableWidget, QAbstrac
 
 from PyQt5.QtCore import Qt
 
-from convenience_functions.server_apis import make_http_request
+from convenience.server_apis import make_http_request
 from ui_widgets.user.user_vehicles import UserVehicles
 
 from entities.user import User

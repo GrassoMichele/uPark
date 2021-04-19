@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QPushButton, QFormLayo
 
 from PyQt5.QtCore import Qt
 
-from convenience_functions.server_apis import make_http_request
+from convenience.server_apis import make_http_request
 
 from .add_dialogs import AddHourlyRateDialog, AddVehicleTypeDialog
 from .edit_dialogs import EditHourlyRateDialog, EditVehicleTypeDialog, EditUserCategoryDialog

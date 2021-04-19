@@ -11,7 +11,7 @@ import requests
 
 from entities.user import User
 from entities.user_category import UserCategory
-from convenience_functions.server_apis import make_http_request
+from convenience.server_apis import make_http_request
 from ui_widgets.user.user_dashboard import UserDashboard
 from ui_widgets.admin.admin_dashboard import AdminDashboard
 
@@ -44,11 +44,6 @@ class Login(QWidget):
         self.password_le = QLineEdit()
         self.password_le.setEchoMode(QLineEdit.Password)
 
-        #TO DELETE!!!!
-        self.email_le.setText("admin@admin")
-        self.password_le.setText("admin")
-
-
         self.password_eye_btn = QPushButton(QIcon("utility/pictures/eye.svg"),"")
         self.password_eye_btn.clicked.connect(self.show_password)
 
@@ -57,6 +52,9 @@ class Login(QWidget):
 
         self.login_btn = QPushButton("Login!")
         self.login_btn.clicked.connect(self.login_submit)
+
+        self.email_le.setText("admin@admin")
+        self.password_le.setText("admin")
 
         formLayout.addRow("Email: ", self.email_le)
         formLayout.addRow("Password: ",  hbox)

@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import QWidget, QCalendarWidget, QLabel, QApplication, QHBoxLayout, QMessageBox, QListWidget, \
                              QVBoxLayout, QTableWidget, QAbstractItemView, QDesktopWidget, QTableWidgetItem, \
-                             QDialog, QDialogButtonBox, QComboBox
+                             QDialog, QDialogButtonBox, QComboBox, QHeaderView
 from PyQt5.QtCore import QDate, Qt, QObject, pyqtSignal, QMetaMethod
 from PyQt5.QtGui import QBrush, QColor
 
@@ -11,8 +11,8 @@ import requests
 
 from datetime import timedelta, datetime
 
-from convenience_functions.server_apis import make_http_request, user_is_admin
-from convenience_functions.datetime_management import datetime_to_UTC, datetime_UTC_to_local
+from convenience.server_apis import make_http_request, user_is_admin
+from convenience.datetime_management import datetime_to_UTC, datetime_UTC_to_local
 from entities.user import User
 from entities.user_category import UserCategory
 from entities.parking_lot import ParkingLot
@@ -184,7 +184,11 @@ class Park(QWidget):
         self.vehicle_types_table = QTableWidget()
         self.vehicle_types_table.setEditTriggers(QAbstractItemView.NoEditTriggers)			# no editable
         self.vehicle_types_table.setColumnCount(1)
+
         self.vehicle_types_table.setHorizontalHeaderLabels(["Reserved:   "])
+        self.vehicle_types_table.horizontalHeader().setStretchLastSection(True);
+        self.vehicle_types_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
+
         self.vehicle_types_table.verticalHeader().hide()                                    # possible modification with another column which items are parking slot numbers
         self.vehicle_types_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         table_hbox.addWidget(self.vehicle_types_table, 1)
@@ -304,12 +308,14 @@ class Park(QWidget):
 
 
         #day = str(self.cal.selectedDate().toString(Qt.ISODate))
-        day = self.cal.selectedDate().toString(Qt.ISODate)
+        day = self.cal.selectedDate()
+        day_before = day.addDays(-1).toString(Qt.ISODate)
+        day = day.toString(Qt.ISODate)
         #print(day)
 
         # start: from local 00:00:00 to utc (e.g. local 2021-04-01 00:00:00 = UTC 2021-03-31 22:00)
         # end: from local 23:59:00 to utc
-        bookings_start_datetime = datetime_to_UTC(day, "00:00", True)     #is_query = True
+        bookings_start_datetime = datetime_to_UTC(day_before, "23:45", True)     #is_query = True
         bookings_end_datetime = datetime_to_UTC(day, "23:59", True)   # 23:59 for include bookings of time xx:45, 23:45 is enough
         # bookings_start_datetime could be different from bookings_end_datetime (max 1 day)
         #print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())

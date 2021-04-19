@@ -157,7 +157,7 @@ void receive_image(const int connection_socket, http_client& client, const struc
         std::cout << std::endl << "Image successfully received!" << std::endl << std::endl;
 
         // Image processing
-        std::string str = "alpr -j ../plates/" + image_name + ".jpeg" + " > ../plates/" + image_name + ".json";
+        std::string str = "alpr -c eu -p it -j ../plates/" + image_name + ".jpeg" + " > ../plates/" + image_name + ".json";
         const char *command = str.c_str();
 
         std::cout << "Processing license plate..." << std::endl;

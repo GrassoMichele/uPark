@@ -9,7 +9,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
 import requests, time
 
-from convenience_functions.server_apis import make_http_request
+from convenience.server_apis import make_http_request
 from entities.user_category import UserCategory
 
 # signal used to delete the signup instance from home class in case of exceptions (e.g. server down )
