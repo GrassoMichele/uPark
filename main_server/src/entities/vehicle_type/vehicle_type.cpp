@@ -48,7 +48,7 @@ std::ostream& operator<<(std::ostream& os, const VehicleType& vt)
     return os;
 }
 
-VehicleTypeException::VehicleTypeException(const std::string & message):_message(message) {}
-const char * VehicleTypeException::what() const throw() {
-      return _message.c_str();
-}
+// VehicleTypeException::VehicleTypeException(const std::string & message):_message(message) {}
+// const char * VehicleTypeException::what() const throw() {
+//       return _message.c_str();
+// }

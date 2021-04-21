@@ -13,11 +13,11 @@ class ParkingLot:
     def set_name(self, name):
         self._name = name
 
-    def set_street(self, street):
-        self._street = street
-
-    def set_num_parking_slots(self, num_parking_slots):
-        self._num_parking_slots = num_parking_slots
+    # def set_street(self, street):
+    #     self._street = street
+    #
+    # def set_num_parking_slots(self, num_parking_slots):
+    #     self._num_parking_slots = num_parking_slots
 
     def set_parking_slots(self, parking_slots):
         self._parking_slots = parking_slots

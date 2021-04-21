@@ -3,36 +3,36 @@
       "ip":"127.0.0.1",
       "port":"50052",
       "crossing_type": "entry",
-      "id_parking_lot": 1
+      "parking_lot_name": "Cittadella"
     },
     {
       "ip":"127.0.0.1",
       "port":"50053",
       "crossing_type": "exit",
-      "id_parking_lot": 1
+      "parking_lot_name": "Cittadella"
     },
     {
       "ip":"127.0.0.1",
       "port":"50054",
       "crossing_type": "entry",
-      "id_parking_lot": 2
+      "parking_lot_name": "Benedettini"
     },
     {
       "ip":"127.0.0.1",
       "port":"50055",
       "crossing_type": "exit",
-      "id_parking_lot": 2
+      "parking_lot_name": "Benedettini"
     },
     {
       "ip":"127.0.0.1",
       "port":"50056",
       "crossing_type": "entry",
-      "id_parking_lot": 3
+      "parking_lot_name": "Corso Italia"
     },
     {
       "ip":"127.0.0.1",
       "port":"50057",
       "crossing_type": "exit",
-      "id_parking_lot": 3
+      "parking_lot_name": "Corso Italia"
     }
 ]

@@ -9,13 +9,14 @@ void ParkingCategoriesAllowed::setId(int id) {
     this->id = id;
 }
 
-void ParkingCategoriesAllowed::setIdParkingLot(int id_parking_lot){
-    this->id_parking_lot = id_parking_lot;
-}
+// void ParkingCategoriesAllowed::setIdParkingLot(int id_parking_lot){
+//     this->id_parking_lot = id_parking_lot;
+// }
+//
+// void ParkingCategoriesAllowed::setIdUserCategory(int id_user_category){
+//     this->id_user_category = id_user_category;
+// }
 
-void ParkingCategoriesAllowed::setIdUserCategory(int id_user_category){
-    this->id_user_category = id_user_category;
-}
 
 int ParkingCategoriesAllowed::getId() const{
     return id;
@@ -40,7 +41,7 @@ std::ostream& operator<<(std::ostream& os, const ParkingCategoriesAllowed& pca)
     return os;
 }
 
-ParkingCategoriesAllowedException::ParkingCategoriesAllowedException(const std::string & message):_message(message) {}
-const char * ParkingCategoriesAllowedException::what() const throw() {
-      return _message.c_str();
-}
+// ParkingCategoriesAllowedException::ParkingCategoriesAllowedException(const std::string & message):_message(message) {}
+// const char * ParkingCategoriesAllowedException::what() const throw() {
+//       return _message.c_str();
+// }

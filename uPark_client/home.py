@@ -10,8 +10,8 @@ import sys
 from ui_widgets.forms.signup import SignUp
 from ui_widgets.forms.login import Login
 
-class Home(QMainWindow):
 
+class Home(QMainWindow):
     def __init__(self):
         super().__init__()
         self.init_ui()
@@ -34,7 +34,6 @@ class Home(QMainWindow):
         app_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
         vbox.addWidget(app_name)
-
         vbox.addStretch()
 
         hbox = QHBoxLayout()
@@ -56,7 +55,6 @@ class Home(QMainWindow):
         hbox.addStretch()
 
         vbox.addLayout(hbox)
-
         vbox.addStretch()
 
         self.widget.setLayout(vbox)
@@ -67,12 +65,15 @@ class Home(QMainWindow):
         self.full_screen()
         self.show()
 
+
     def set_signup_close(self):
         self.signup.close()
+
 
     def full_screen(self):
         desktop_resolution = QDesktopWidget().availableGeometry()
         self.setGeometry(desktop_resolution)
+
 
     def show_signup(self):
         if self.signup is None:
@@ -110,7 +111,6 @@ class Home(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     ex = Home()
-
     sys.exit(app.exec_())
 
 

@@ -13,6 +13,7 @@ void HourlyRate::setAmount(float amount){
     this->amount = amount;
 }
 
+
 int HourlyRate::getId() const{
     return id;
 }
@@ -39,7 +40,7 @@ std::ostream& operator<<(std::ostream& os, const HourlyRate& h)
     return os;
 }
 
-HourlyRateException::HourlyRateException(const std::string & message):_message(message) {}
-const char * HourlyRateException::what() const throw() {
-      return _message.c_str();
-}
+// HourlyRateException::HourlyRateException(const std::string & message):_message(message) {}
+// const char * HourlyRateException::what() const throw() {
+//       return _message.c_str();
+// }

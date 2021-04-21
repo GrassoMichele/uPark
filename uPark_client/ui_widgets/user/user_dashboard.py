@@ -6,13 +6,13 @@ from .user_vehicles import UserVehicles
 
 from ..dashboard import Dashboard
 
+
 class UserDashboard(Dashboard):
 
     def __init__(self, user):
         button_names = ["Park", "Bookings in Progress", "Bookings Expired", "Vehicles", "Profile", "Logout"]
         super().__init__(user, button_names)
         self.initUI()
-
 
     def initUI(self):
         self.stack.addWidget(Park(self.https_session, self.user))

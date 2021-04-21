@@ -14,13 +14,13 @@ void ParkingSlot::setId(int id){
     this->id = id;
 }
 
-void ParkingSlot::setNumber(int number){
-    this->number = number;
-}
-
-void ParkingSlot::setIdParkingLot(int id_parking_lot){
-    this->id_parking_lot = id_parking_lot;
-}
+// void ParkingSlot::setNumber(int number){
+//     this->number = number;
+// }
+//
+// void ParkingSlot::setIdParkingLot(int id_parking_lot){
+//     this->id_parking_lot = id_parking_lot;
+// }
 
 void ParkingSlot::setIdVehicleType(int id_vehicle_type){
     this->id_vehicle_type = id_vehicle_type;
@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream& os, const ParkingSlot& ps)
     return os;
 }
 
-ParkingSlotException::ParkingSlotException(const std::string & message):_message(message) {}
-const char * ParkingSlotException::what() const throw() {
-      return _message.c_str();
-}
+// ParkingSlotException::ParkingSlotException(const std::string & message):_message(message) {}
+// const char * ParkingSlotException::what() const throw() {
+//       return _message.c_str();
+// }

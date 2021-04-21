@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QTableWidget, QAbstrac
 from PyQt5.QtCore import Qt
 
 from datetime import timedelta, datetime, timezone
+from dateutil.tz import tzutc
 
 from convenience.server_apis import make_http_request, user_is_admin
 from convenience.datetime_management import datetime_UTC_to_local
@@ -21,16 +22,20 @@ class DetailsDialog(QDialog):
     def __init__(self, user, booking, vehicle_info, parking_slot_info, https_session, only_expired, parent = None):
         super().__init__(parent=parent)
 
-        booking_info_dialog = [("Entry time:", booking.get_datetime_start()),
-                                ("Exit time:", booking.get_datetime_end()),
+        booking_info_dialog = [ ("Datetime start:", booking.get_datetime_start()),
+                                ("Datetime end:", booking.get_datetime_end()),
+                                ("Entry time:", booking.get_entry_time()),
+                                ("Exit time:", booking.get_exit_time()),
                                 ("Amount:", booking.get_amount()),
                                 ("", "")]
+
         if vehicle_info != None:
             booking_info_dialog.extend([("Vehicle info:", ""),
                                         ("License plate:", vehicle_info.get_license_plate()),
                                         ("Brand:", vehicle_info.get_brand()),
                                         ("Model:", vehicle_info.get_model()),
                                         ("", "")])
+
         if parking_slot_info != None:
             booking_info_dialog.extend([("Parking slot info:", ""),
                                         ("Parking lot name:", parking_slot_info[0]),
@@ -42,10 +47,15 @@ class DetailsDialog(QDialog):
         self.setWindowTitle("Booking details")
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok)
+        ok_button = self.buttonBox.button(QDialogButtonBox.Ok)
+        ok_button.setAutoDefault(True)
+        ok_button.setDefault(True)
         self.buttonBox.accepted.connect(self.accept)        # QDialog slot
 
         if not user_is_admin(user, https_session) and not only_expired:             # admin can't delete user bookings and expired bookings can't be deleted
-            self.buttonBox.addButton("Delete", QDialogButtonBox.RejectRole)
+            delete_button = self.buttonBox.addButton("Delete", QDialogButtonBox.RejectRole)
+            delete_button.setAutoDefault(False)
+            delete_button.setDefault(False)
             self.buttonBox.rejected.connect(lambda: self.delete_booking(booking, https_session))
 
         self.layout = QVBoxLayout()
@@ -74,7 +84,6 @@ class DetailsDialog(QDialog):
 
 
 class Bookings(QWidget):
-
     def __init__(self, https_session, user, only_in_progress = False, only_expired = False):
         super().__init__()
         self.https_session = https_session
@@ -84,7 +93,6 @@ class Bookings(QWidget):
         self.initUI()
 
     def initUI(self):
-
         self.is_admin = False
         booking_info = ["Datetime start", "Datetime end", "License plate", "Parking lot", "Slot number"]
 
@@ -94,7 +102,9 @@ class Bookings(QWidget):
 
         vbox = QVBoxLayout()
 
-        text = QLabel("Bookings in progress")
+        window_title = "Bookings in progress" if self.only_in_progress else "Bookings expired" if self.only_expired else "Bookings"
+
+        text = QLabel(window_title)
         text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
         vbox.addWidget(text, 1, Qt.AlignTop | Qt.AlignHCenter)
         self.user_bookings_table = QTableWidget(0, len(booking_info)+1)
@@ -107,12 +117,9 @@ class Bookings(QWidget):
         self.user_bookings_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
 
         vbox.addWidget(self.user_bookings_table, 9)
-
         vbox.addStretch(1)
 
         self.setLayout(vbox)
-
-        window_title = "Bookings in progress" if self.only_in_progress else "Bookings expired" if self.only_expired else "Bookings"
 
         self.setWindowTitle(window_title)
         self.show()
@@ -153,7 +160,6 @@ class Bookings(QWidget):
             return
 
         if self.parking_lots:                       # if list is empty -> false
-            #print(self.parking_lots)
             for parking_lot in self.parking_lots:
                 # get info on parking slots of parking lot
                 response = make_http_request(self.https_session, "get", "parking_lots/" + str(parking_lot.get_id()) + "/parking_slots")
@@ -194,8 +200,9 @@ class Bookings(QWidget):
         self.user_bookings_table.clearContents()
         self.user_bookings_table.setRowCount(0)
 
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H_%M_%S")
-        #print(now)
+        now_datetime = datetime.now(timezone.utc)
+        now = now_datetime.strftime("%Y-%m-%dT%H_%M_%S")
+        utc_zone = tzutc()
         params = {}
 
         if self.only_in_progress:
@@ -209,13 +216,18 @@ class Bookings(QWidget):
             params["id_user"] = self.user.get_id()
 
         response = make_http_request(self.https_session, "get", "bookings", params = params)
-        #print(response.json())
 
         if response.json():
             self.bookings = [Booking(**booking) for booking in response.json()]
-            #print(len(self.bookings))
+
             for i, booking in enumerate(self.bookings):
-                #print(booking)
+
+                if self.only_expired:
+                    booking_end_datetime = datetime.strptime(booking.get_datetime_end(), "%Y-%m-%d %H:%M:%S")
+                    booking_end_datetime = booking_end_datetime.replace(tzinfo=utc_zone)
+                    if (booking_end_datetime - now_datetime).total_seconds() > 0:
+                        continue
+
                 booking_methods = [booking.get_datetime_start, booking.get_datetime_end, self.get_vehicle_info, self.get_parking_slot_info]
 
                 if self.is_admin:
@@ -224,6 +236,10 @@ class Bookings(QWidget):
                 # from UTC to local timezone
                 booking.set_datetime_start(datetime_UTC_to_local(booking.get_datetime_start()))
                 booking.set_datetime_end(datetime_UTC_to_local(booking.get_datetime_end()))
+                if booking.get_entry_time():
+                    booking.set_entry_time(datetime_UTC_to_local(booking.get_entry_time()))
+                if booking.get_exit_time():
+                    booking.set_exit_time(datetime_UTC_to_local(booking.get_exit_time()))
 
                 self.user_bookings_table.insertRow(i)
                 for j in range(self.user_bookings_table.columnCount() - 1):
@@ -248,7 +264,6 @@ class Bookings(QWidget):
                         self.user_bookings_table.setItem(i, j, item)
                     else:
                         slot_info = method(booking.get_id_parking_slot())
-                        #print("slot_info " , slot_info)
                         item = QTableWidgetItem(slot_info[0])
                         item.setTextAlignment(Qt.AlignCenter)
                         self.user_bookings_table.setItem(i, j, item)
@@ -274,6 +289,7 @@ class Bookings(QWidget):
             pass
         else:
             self.get_user_bookings()
+
 
     def showEvent(self, event):
         self.get_user_vehicles()

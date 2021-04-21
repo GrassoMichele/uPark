@@ -12,9 +12,11 @@ import requests, time
 from convenience.server_apis import make_http_request
 from entities.user_category import UserCategory
 
+
 # signal used to delete the signup instance from home class in case of exceptions (e.g. server down )
 class SignUp_signals(QObject):
     close = pyqtSignal()
+
 
 class SignUp(QWidget):
     def __init__(self):
@@ -90,31 +92,30 @@ class SignUp(QWidget):
 
 
     def load_user_categories(self):
-            response = make_http_request(self.https_session, "get", "user_categories", show_messagebox = False)
-
-            if response:
-                self.user_categories = [UserCategory(**user_category) for user_category in response.json() if user_category["name"] != "Admin"]
-                self.user_category_cmb.clear()
-                self.user_category_cmb.addItems([user_category.get_name() for user_category in self.user_categories])
-
-            else:
-                QMessageBox.critical(None, "Alert", "Server error. Retry later.")
-                raise Exception("Http Error")
+        response = make_http_request(self.https_session, "get", "user_categories", show_messagebox = False)
+        if response:
+            self.user_categories = [UserCategory(**user_category) for user_category in response.json() if user_category["name"] != "Admin"]
+            self.user_category_cmb.clear()
+            self.user_category_cmb.addItems([user_category.get_name() for user_category in self.user_categories])
+        else:
+            QMessageBox.critical(None, "Alert", "Server error. Retry later.")
+            raise Exception("Http Error")
 
 
     def showEvent(self, event):
         try:
             self.load_user_categories()
         except Exception:
-            QTimer.singleShot(10,self.hide)   # after 10 milliseconds hide the signup QtWidget
+            QTimer.singleShot(10, self.hide)   # after 10 milliseconds hide the signup QtWidget
 
 
     def signup_submit(self):
         # searching for selected user_category info
         user_category_selected = self.user_categories[self.user_category_cmb.currentIndex()]
 
-        print(user_category_selected)
-
+        if len(self.password_le.text()) < 8:
+            QMessageBox.information(self, "uPark tip", "Password must contains at least 8 characters!")
+            return
 
         user_dict = {
                     "email": self.email_le.text(),

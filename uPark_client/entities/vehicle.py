@@ -11,8 +11,8 @@ class Vehicle:
     def set_id(self, id):
         self._id = id
 
-    def set_license_plate(self, license_plate):
-        self._license_plate = license_plate
+    # def set_license_plate(self, license_plate):
+    #     self._license_plate = license_plate
 
     def set_brand(self, brand):
         self._brand = brand
@@ -20,11 +20,11 @@ class Vehicle:
     def set_model(self, model):
         self._model = model
 
-    def set_id_user(self, id_user):
-        self._id_user = id_user
+    # def set_id_user(self, id_user):
+    #     self._id_user = id_user
 
-    def set_id_vehicle_type(self, id_vehicle_type):
-        self._id_vehicle_type = id_vehicle_type
+    # def set_id_vehicle_type(self, id_vehicle_type):
+    #     self._id_vehicle_type = id_vehicle_type
 
 
     def get_id(self):

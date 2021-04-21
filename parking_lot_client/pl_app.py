@@ -23,7 +23,6 @@ def send_image(socket, path):
 
     try:
         with open(path, "rb") as f:
-
             print("Sending picture size... ")
             get_image_size(f).to_bytes(4, 'little')
             socket.sendall(get_image_size(f).to_bytes(4, 'little'))
@@ -37,11 +36,10 @@ def send_image(socket, path):
 
             print(f"Bytes read: {len(bytes_read)} ")
             print(f"Received data in socket: {bytes_read.decode('utf-8')} ")
-
             print("Sending picture... ")
+
             for chunck in iter(partial(f.read, CHUNK_SIZE), b''):
                 socket.sendall(chunck)
-
                 print(f"Packet Size: {CHUNK_SIZE} ")
                 print(f"Packet Number: {packet_index} ")
                 packet_index += 1
@@ -49,13 +47,14 @@ def send_image(socket, path):
     except IOError as e:
         print(f"Some error in image opening: {e} ")
 
+
 class MainWindow(QMainWindow):
     def __init__(self, socket):
         super().__init__()
 
         self.setWindowTitle("Parking Lot Client")
-        # to center the window
         self.setFixedSize(500,125)
+        # to center the window
         qtRectangle = self.frameGeometry()
         centerPoint = QDesktopWidget().availableGeometry().center()
         qtRectangle.moveCenter(centerPoint)
@@ -88,7 +87,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Notification", " Processing Server has gone away!\n Bye!")
                 sys.exit(1)
 
-            #reading "open" command
+            # reading "open" command
             open_command = socket.recv(2).decode('utf-8')
 
             if open_command[:-1] == "1":
@@ -97,9 +96,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Notification", "CROSSING NOT ALLOWED!")
 
 
-
-if __name__ == "__main__":
-
+def main():
     # check if port argument was provided
     if len(sys.argv) < 2:
         print("ERROR, no port provided! ")
@@ -124,10 +121,13 @@ if __name__ == "__main__":
             window = MainWindow(sckt)
             sys.exit(app.exec_())
 
-
         except OSError as e:
             print(f"Error on socket: {e} ")
         except KeyboardInterrupt as e:
             print("\n(CTRL+C) Closing Parking Lot Client...")
             sckt.close()
             sys.exit(0);
+
+
+if __name__ == "__main__":
+    main()

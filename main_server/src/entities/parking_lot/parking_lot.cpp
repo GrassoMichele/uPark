@@ -13,13 +13,14 @@ void ParkingLot::setName(std::string name){
     this->name = name;
 }
 
-void ParkingLot::setStreet(std::string street){
-    this->street = street;
-}
+// void ParkingLot::setStreet(std::string street){
+//     this->street = street;
+// }
+//
+// void ParkingLot::setNumParkingSlots(int num_parking_slots){
+//     this->num_parking_slots = num_parking_slots;
+// }
 
-void ParkingLot::setNumParkingSlots(int num_parking_slots){
-    this->num_parking_slots = num_parking_slots;
-}
 
 int ParkingLot::getId() const{
     return id;
@@ -58,7 +59,7 @@ std::ostream& operator<<(std::ostream& os, const ParkingLot& p)
     return os;
 }
 
-ParkingLotException::ParkingLotException(const std::string & message):_message(message) {}
-const char * ParkingLotException::what() const throw() {
-      return _message.c_str();
-}
+// ParkingLotException::ParkingLotException(const std::string & message):_message(message) {}
+// const char * ParkingLotException::what() const throw() {
+//       return _message.c_str();
+// }

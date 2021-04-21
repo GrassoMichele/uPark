@@ -10,8 +10,8 @@ class UserCategory:
     def set_id(self, id):
         self._id = id
 
-    def set_name(self, name):
-        self._name = name
+    # def set_name(self, name):
+    #     self._name = name
 
     def set_id_hourly_rate(self, id_hourly_rate):
         self._id_hourly_rate = id_hourly_rate

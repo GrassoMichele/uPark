@@ -20,6 +20,7 @@ const char * DatabaseException::what() const throw() {
       return _message.c_str();
 }
 
+
 void Database::db_init(){
     //Align the categories of db_upark and db_university
     //Read from db_university
@@ -31,18 +32,18 @@ void Database::db_init(){
         connection->setSchema("db_upark");
 
         while(res->next()){
-          std::cout << "New Category found: " <<  res->getString("name")  << std::endl;
+            std::cout << "New Category found: " <<  res->getString("name")  << std::endl;
 
-          pstmt.reset(connection->prepareStatement("INSERT INTO db_upark.user_categories (name, id_hourly_rate) VALUES (?, 4)"));
-          pstmt->setString(1, res->getString("name"));
-          int success = pstmt->executeUpdate();
+            pstmt.reset(connection->prepareStatement("INSERT INTO db_upark.user_categories (name, id_hourly_rate) VALUES (?, 4)"));
+            pstmt->setString(1, res->getString("name"));
+            int success = pstmt->executeUpdate();
 
-          if(success==0){
-              throw DatabaseException("Can't add new category");
-          }
-          else{
-              std::cout << "-> Category added!" << std::endl;
-          }
+            if(success==0){
+                throw DatabaseException("Can't add new category");
+            }
+            else{
+                std::cout << "-> Category added!" << std::endl;
+            }
         }
         std::cout << "--- upark_db is updated! ---" << std::endl;
     }
@@ -51,6 +52,7 @@ void Database::db_init(){
         throw DatabaseException("Alignment Failed!");
     }
 }
+
 
 // ---SELECT---
 template<>
@@ -103,8 +105,8 @@ Booking Database::select_instance_object<Booking>(){
         res->getInt("id_parking_slot"), res->getString("note"));
 }
 
-//---user_existence_check---
 
+//---user_existence_check---
 bool Database::user_existence_check(const User& u, const std::string& upark_code, const std::string& category_name){
     try {
         // A user can be created in DB_upark only if present on DB_University
@@ -118,7 +120,7 @@ bool Database::user_existence_check(const User& u, const std::string& upark_code
         res.reset(pstmt->executeQuery());
         res->next();
 
-        if(res->getBoolean(1)){
+        if(res->getBoolean(1)){           // returns the first column of the query's result
             std::cout << "A match was found for user: " << u.getEmail() << std::endl;
             return true;
         }
@@ -310,13 +312,18 @@ void Database::update_query(const Booking& t){
                   "exit_time = ?, amount = ?, id_user = ?, id_vehicle = ?, id_parking_slot = ?, note = ? WHERE id = ?"));
     pstmt->setString(1, t.getDateTimeStart());
     pstmt->setString(2, t.getDateTimeEnd());
-    pstmt->setString(3, t.getEntryTime());
-    pstmt->setString(4, t.getExitTime());
+    if (t.getEntryTime() != "")
+        pstmt->setString(3, t.getEntryTime());
+    else
+        pstmt->setNull(3, 0);
+    if (t.getExitTime() != "")
+        pstmt->setString(4, t.getExitTime());
+    else
+        pstmt->setNull(4, 0);
     pstmt->setDouble(5, t.getAmount());
     pstmt->setInt(6, t.getIdUser());
     pstmt->setInt(7, t.getIdVehicle());
     pstmt->setInt(8, t.getIdParkingSlot());
     pstmt->setString(9, t.getNote());
     pstmt->setInt(10, t.getId());
-
 }

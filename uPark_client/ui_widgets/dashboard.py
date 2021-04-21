@@ -15,7 +15,6 @@ class Dashboard_signal(QObject):
 
 
 class Dashboard(QMainWindow):
-
     def __init__(self, user, button_names):
         super().__init__()
         self.user = user
@@ -47,7 +46,6 @@ class Dashboard(QMainWindow):
 
         for name in self.button_names:
             self.buttons.append(QPushButton(name))
-            #self.buttons[-1].setFlat(True)
             self.buttons[-1].clicked.connect(self.change_widget)
             vbox.addWidget(self.buttons[-1])
 

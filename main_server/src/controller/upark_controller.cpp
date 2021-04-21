@@ -27,7 +27,7 @@ void UParkController::initHttpMethodHandlers() {
     listener.support(methods::DEL, std::bind(&UParkController::handleDelete, this, std::placeholders::_1));
 }
 
-//------------------------------------------------------------------------------
+//------------------------------------ POST ------------------------------------
 
 void UParkController::handlePost(http_request request) {
     std::vector< utility::string_t > path = requestPath(request);
@@ -91,7 +91,8 @@ void UParkController::handlePost(http_request request) {
     }
 }
 
-//------------------------------------------------------------------------------
+
+//------------------------------------ GET -------------------------------------
 
 void UParkController::handleGet(http_request request) {
     std::vector< utility::string_t > path = requestPath(request);
@@ -176,7 +177,8 @@ void UParkController::handleGet(http_request request) {
     }
 }
 
-//------------------------------------------------------------------------------
+
+//----------------------------------- PUT --------------------------------------
 
 void UParkController::handlePut(http_request request) {
 
@@ -221,7 +223,8 @@ void UParkController::handlePut(http_request request) {
     }
 }
 
-//------------------------------------------------------------------------------
+
+//--------------------------------- DELETE -------------------------------------
 
 void UParkController::handleDelete(http_request request) {
     std::vector< utility::string_t > path = requestPath(request);
@@ -269,13 +272,12 @@ void UParkController::handleDelete(http_request request) {
 
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
 
 void UParkController::handler_json(const http_request& request, std::function<void(const http_request&, const json::value&, const User&)> handler, const User& authenticated_user) {
     request.extract_json().
     then([=](pplx::task<json::value> requestTask) {                       // task based continuation to handle exception
         try {
-            json::value json_request = requestTask.get();               //inside try to return value or handle a possible exception
+            json::value json_request = requestTask.get();                 //inside try to return value or handle a possible exception
 
             handler(request, json_request, authenticated_user);
         }
@@ -335,7 +337,7 @@ std::tuple<bool, User> UParkController::userAuthentication(http_request request)
     utility::string_t auth_header = headers["Authorization"];
     std::string::size_type credentials_position = auth_header.find("Basic");
 
-    if (credentials_position == std::string::npos)            //If not found
+    if (credentials_position == std::string::npos)            // If not found
         throw UserException("No credentials found in authorization header.");
 
     std::string base64_creds = auth_header.substr(credentials_position + std::string("Basic").length() + 1);

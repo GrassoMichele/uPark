@@ -44,7 +44,6 @@ void get_ns::login(const web::http::http_request& request, const web::json::valu
     response["email"] = json::value::string(authenticated_user.getEmail());
     response["name"] = json::value::string(authenticated_user.getName());
     response["surname"] = json::value::string(authenticated_user.getSurname());
-    //to change with Base64
     response["password"] = json::value::string(authenticated_user.getPassword());
 
     std::stringstream decimal_value;
@@ -72,7 +71,6 @@ void get_ns::users_id(const web::http::http_request& request, const web::json::v
         response["email"] = json::value::string(requested_user.getEmail());
         response["name"] = json::value::string(requested_user.getName());
         response["surname"] = json::value::string(requested_user.getSurname());
-        //to change with Base64
         response["password"] = json::value::string(requested_user.getPassword());
 
         // cast double to string because json rounding problem on numbers
@@ -288,8 +286,8 @@ void get_ns::parking_lot(const web::http::http_request& request, const web::json
 void get_ns::parking_lot_id_categories_allowed(const web::http::http_request& request, const web::json::value& json_request, const User& authenticated_user){
     User requesting_user=authenticated_user;
     std::string requesting_user_category_name = mapperUC.Read(requesting_user.getIdUserCategory()).getName();
-    int requested_parking_lot_id = std::stoi(uri::split_path(uri::decode(request.relative_uri().path()))[1]);
 
+    int requested_parking_lot_id = std::stoi(uri::split_path(uri::decode(request.relative_uri().path()))[1]);
 
     if (requesting_user_category_name == "Admin"){
 
@@ -368,15 +366,14 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
     //response is a list of json object
     json::value response;
     int i=0;
-    std::string time_format = "YYYY-mm-dd";
-
+    std::string date_format = "YYYY-mm-dd";
 
     //since time management
     time_t filter_b_start_time;
     if (bookings_since != "null") {
         struct tm filter_b_start_struct;
 
-        if (bookings_since.length() != time_format.length()){            //if booking since format contains also time YYYY-mm-ddTHH:MM:SS
+        if (bookings_since.length() != date_format.length()){            //if booking since format contains also time YYYY-mm-ddTHH:MM:SS
             std::replace(bookings_since.begin(), bookings_since.end(), 'T', ' ');
             std::replace(bookings_since.begin(), bookings_since.end(), '_', ':');
         }
@@ -389,14 +386,13 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
         filter_b_start_time = timegm(&filter_b_start_struct);
     }
 
-
     //until time management
     time_t filter_b_end_time;
     if (bookings_until != "null") {
         struct tm filter_b_end_struct;
         bool no_time_provided = false;
 
-        if (bookings_until.length() != time_format.length()){
+        if (bookings_until.length() != date_format.length()){
             std::replace(bookings_until.begin(), bookings_until.end(), 'T', ' ');
             std::replace(bookings_until.begin(), bookings_until.end(), '_', ':');
         }
@@ -409,13 +405,12 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
         f_bdte >> std::get_time(&filter_b_end_struct, "%Y-%m-%d %T");
         filter_b_end_time = timegm(&filter_b_end_struct);
 
-        //include entire last day
+        // include entire last day
         if (no_time_provided)
             filter_b_end_time += (3600 * 24);
     }
 
     for(Booking b : bookings){
-        //if (requesting_user_category_name == "Admin" || b.getIdUser() == requesting_user.getId()){
         // filtering on user_id required
         if (bookings_id_user != 0 && b.getIdUser() != bookings_id_user)
             continue;
@@ -460,7 +455,6 @@ void get_ns::bookings(const web::http::http_request& request, const web::json::v
         b_json["note"] = json::value::string(b.getNote());
 
         response[i++]=b_json;
-        //}
     }
 
     request.reply(status_codes::OK, response);

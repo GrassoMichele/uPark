@@ -10,11 +10,11 @@ class ParkingSlot:
     def set_id(self, id):
         self._id = id
 
-    def set_number(self, number):
-        self._number = number
-
-    def set_id_parking_lot(self, id_parking_lot):
-        self._id_parking_lot = id_parking_lot
+    # def set_number(self, number):
+    #     self._number = number
+    #
+    # def set_id_parking_lot(self, id_parking_lot):
+    #     self._id_parking_lot = id_parking_lot
 
     def set_id_vehicle_type(self, id_vehicle_type):
         self._id_vehicle_type = id_vehicle_type

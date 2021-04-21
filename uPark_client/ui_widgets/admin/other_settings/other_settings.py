@@ -2,7 +2,6 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QPushButton, QFormLayout, \
                             QVBoxLayout, QHBoxLayout, QLineEdit, QListWidget, \
                             QSpacerItem, QSizePolicy, QComboBox
-
 from PyQt5.QtCore import Qt
 
 from convenience.server_apis import make_http_request
@@ -16,7 +15,7 @@ from entities.user_category import UserCategory
 
 
 class OptionsKeypad(QWidget):
-    def __init__(self, https_session, entity_type, hourly_rates = None):          # buttons_behaviour_funcs is a tuple: (add_func, del_func, edit_func)
+    def __init__(self, https_session, entity_type, hourly_rates = None):
         super().__init__()
         self.https_session = https_session
         self.entity_type = entity_type
@@ -99,7 +98,6 @@ class OptionsKeypad(QWidget):
         selected_item_index = self.items_list.currentRow()
 
         if selected_item_index != -1:               # one item selected
-
             entity_name = self.entity_type.replace("_", " ").capitalize()
 
             reply = QMessageBox.question(self, 'Delete ' + entity_name, f"Are you sure to delete this {entity_name}?",
@@ -117,7 +115,6 @@ class OptionsKeypad(QWidget):
         selected_item_index = self.items_list.currentRow()
 
         if selected_item_index != -1:               # one item selected
-
             selected_item_id = self.entity_objs[selected_item_index].get_id()
 
             if self.entity_type == "hourly_rates":
@@ -134,15 +131,12 @@ class OptionsKeypad(QWidget):
 
 
 class OtherSettings(QWidget):
-
     def __init__(self, https_session):
         super().__init__()
         self.https_session = https_session
         self.initUI()
 
-
     def initUI(self):
-
         title = "Other settings"
 
         vbox_main = QVBoxLayout()

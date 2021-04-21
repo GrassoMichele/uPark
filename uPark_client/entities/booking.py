@@ -27,8 +27,8 @@ class Booking:
     def set_exit_time(self, exit_time):
         self._exit_time = exit_time
 
-    def set_amount(self, amount):
-        self._amount = amount
+    # def set_amount(self, amount):
+    #     self._amount = amount
 
     # def set_id_user(self, id_user):
     #     self._id_user = id_user

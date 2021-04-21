@@ -28,10 +28,8 @@ class Table_signal(QObject):
 
 
 class Bookings_table(QTableWidget):
-
     def __init__(self, rows, columns, parent, signal):
         super().__init__(rows, columns, parent)
-
         self.signal = signal
         self.init_UI()
 
@@ -73,10 +71,7 @@ class Bookings_table(QTableWidget):
         if event.button() == Qt.LeftButton:                     # Release event only if done with left button
             indexSelection = [(item.row() , item.column()) for item in self.selectedIndexes()]
 
-            print("Selection info: ", len(indexSelection), indexSelection)
-
             if len(indexSelection) != 0:                        # at least one cell selected
-
                 # check on selection validity, only with multiple cells selected
                 error = False
                 for i in range(1, len(indexSelection)):
@@ -87,23 +82,18 @@ class Bookings_table(QTableWidget):
                     QMessageBox.critical(self, "Error", "Not a valid selection!")
                     return
 
-                # if no errors occured, proceed
-                # take the first and last cell in selection
+                # if no errors occured, proceed, take the first and last cell in selection
                 parking_slot_number = indexSelection[0][0] + 1            # parking slot numbers start from one
-                booking_start_time = self.quarters_of_hour[indexSelection[0][1]]        # format xx:xx              ADD :00?
-                #print(booking_start_time, type(booking_start_time))
+                booking_start_time = self.quarters_of_hour[indexSelection[0][1]]        # format xx:xx
                 booking_end_time = self.quarters_of_hour[indexSelection[-1][1] + 1]
-                #print(booking_end_time, type(booking_end_time))
                 self.signal.message.emit(parking_slot_number, booking_start_time, booking_end_time)
 
         self.clearSelection()
 
 
     def item_paint(self, row_index, col_index, color, deactivate = True):
-
         self.setItem(row_index, col_index, QTableWidgetItem(""))
         cell = self.item(row_index, col_index)
-
         cell.setBackground(QBrush(QColor(color)))
 
         # colors handling
@@ -120,7 +110,6 @@ class Bookings_table(QTableWidget):
             cell.setFlags(Qt.NoItemFlags)                       # cell no selectable, editable, ecc.
 
 
-
 class BookingDialog(QDialog):
     def __init__(self, start, end, duration, parking_slot, user_vehicles, slot_vehicle_type_id, amount, parent=None):
         super().__init__(parent=parent)
@@ -128,7 +117,6 @@ class BookingDialog(QDialog):
         self.setWindowTitle("Booking")
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)        # QDialog slot
         self.buttonBox.rejected.connect(self.reject)
@@ -139,23 +127,21 @@ class BookingDialog(QDialog):
         self.layout.addWidget(QLabel("<b>End: </b>" + end))
         self.layout.addWidget(QLabel("<b>Duration: </b>" + str(duration)))
         self.layout.addWidget(QLabel("<b>Parking slot: </b>" + str(parking_slot)))
-
         self.layout.addWidget(QLabel("<b>Vehicle: </b>"))
         # filter on user vehicles
         self.user_vehicles_cmb = QComboBox()
         self.user_vehicles_cmb.addItems([f"{vehicle.get_license_plate()} - {vehicle.get_brand()} - {vehicle.get_model()}" for vehicle in user_vehicles if vehicle.get_id_vehicle_type() == slot_vehicle_type_id])
+
         if self.user_vehicles_cmb.count() == 0:
             self.buttonBox = QDialogButtonBox(QDialogButtonBox.Cancel)
             self.buttonBox.setCenterButtons(True)
             self.buttonBox.rejected.connect(self.reject)
 
         self.layout.addWidget(self.user_vehicles_cmb)
-
         self.layout.addWidget(QLabel("<b>Amount: " + amount + "</b>"))
-
         self.layout.addSpacing(20)
-
         self.layout.addWidget(self.buttonBox)
+
         self.setLayout(self.layout)
 
 
@@ -164,7 +150,6 @@ class BookingDialog(QDialog):
 
 
 class Park(QWidget):
-
     def __init__(self, https_session, user):
         super().__init__()
         self.https_session = https_session
@@ -178,7 +163,7 @@ class Park(QWidget):
         vbox_main = QVBoxLayout(self)
 
         table_hbox = QHBoxLayout()
-        self.tableWidget = Bookings_table(50,96, self, self.table_signal)           # 50 should be the parking lot number of slots
+        self.tableWidget = Bookings_table(0, 96, self, self.table_signal)           # 0 is the parking lot default number of slots
         table_hbox.addWidget(self.tableWidget, 10)
 
         self.vehicle_types_table = QTableWidget()
@@ -205,6 +190,7 @@ class Park(QWidget):
         self.parking_lots_list = QListWidget()
         self.parking_lots_list.setStyleSheet("font: 11pt Arial;")
         self.parking_lots_list.setMinimumHeight(150)
+        self.parking_lots_list.setMinimumWidth(250)
         self.parking_lots_list.currentItemChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], True))
         self.pl_vbox.addWidget(self.parking_lots_list, 2, Qt.AlignTop)
 
@@ -215,12 +201,10 @@ class Park(QWidget):
 
         self.cal = QCalendarWidget(self)
         self.cal.setGridVisible(True)
-        #self.cal.setMinimumDate(QDate.currentDate())		# not show previous days
+        #self.cal.setMinimumDate(QDate.currentDate())		# doesn't show previous days
 
         bottom_hbox.addWidget(self.cal, 1)
         bottom_hbox.addStretch(1)
-
-        #hbox.addLayout(vbox, 10)
 
         text = QLabel("Park")
         text.setStyleSheet("font-family: Ubuntu; font-size: 30px;")
@@ -233,40 +217,41 @@ class Park(QWidget):
         self.setLayout(vbox_main)
 
         self.setWindowTitle("Park")
-        #self.full_screen()
         self.show()
 
 
-    def full_screen(self):
-        desktop_resolution = QDesktopWidget().availableGeometry()
-        self.setGeometry(desktop_resolution)
+    # get info on vehicle type of parking_slots
+    def get_vehicle_types(self):
+        self.vehicle_types = []
+        response = make_http_request(self.https_session, "get", "vehicle_types")
+        if response.json():
+            self.vehicle_types = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
 
 
     # get info on parking lots
     def get_parking_lots(self):
         self.parking_lots_list.clear()
+
+        # self.parking_lots = []
+        # self.parking_lot = None                   # selected parking lot
+
         response = make_http_request(self.https_session, "get", "parking_lots")
-        if response.json():
+
+        if response.json():                           # if json is not null
             self.parking_lots = [ParkingLot(**parking_lots) for parking_lots in response.json()]
         else:
             self.parking_lots = []
             return
 
-        if self.parking_lots:                       # if list is empty -> false
-            #print(self.parking_lots)
+        if self.parking_lots:
+
             for parking_lot in self.parking_lots:
-                self.parking_lots_list.addItem(parking_lot.get_name().capitalize())
+
+                self.parking_lots_list.addItem(f"{parking_lot.get_name()} - {parking_lot.get_street().capitalize()}")
                 # get info on parking slots of parking lot
                 response = make_http_request(self.https_session, "get", "parking_lots/" + str(parking_lot.get_id()) + "/parking_slots")
                 if response.json():
                     parking_lot.set_parking_slots([ParkingSlot(**parking_slot) for parking_slot in response.json()])
-            #print(self.parking_lots)
-
-            # get info on vehicle type of parking_slots
-            response = make_http_request(self.https_session, "get", "vehicle_types")
-            if response.json():
-                self.vehicle_types = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
-            #print(self.vehicle_types)
 
             self.parking_lots_list.setCurrentRow(0)             # first item selected (default)
             self.parking_lot = self.parking_lots[0]             # self.parking_lot = actually selected parking lot (default)
@@ -281,7 +266,7 @@ class Park(QWidget):
 
 
     def get_bookings(self, parking_lot, selected_park_changed):
-        #GET bookings?since=xxxx-xx-xx&until=xxxx-xx-xx&id_user=x&id_parking_lot=x
+        # GET bookings?since=xxxx-xx-xx&until=xxxx-xx-xx&id_user=x&id_parking_lot=x
         self.parking_lot = parking_lot
         # clear previously selected info (also items background color). Removes all items not in the headers.
         self.tableWidget.clearContents()
@@ -291,58 +276,41 @@ class Park(QWidget):
         # selected_park_changed=True when there is a change in selected parking lot. Info on parking slots needs to be updated only in this case. Otherwise in case of date change is equal to False.
         if selected_park_changed:
             self.tableWidget.setRowCount(self.parking_lot.get_num_parking_slots())
-
             # shows the associated vehicle type for each parking slot
             self.vehicle_types_table.clearContents()
             self.vehicle_types_table.setRowCount(self.tableWidget.rowCount())           # each parking slot has associated exactly one vehicle type
-            for i in range(self.vehicle_types_table.rowCount()):
 
+            for i in range(self.vehicle_types_table.rowCount()):
                 try:
                     vehicle_type_index = self.vehicle_types.index(VehicleType(id=self.parking_lot.get_parking_slots()[i].get_id_vehicle_type()))
                 except ValueError:
                     return
                 else:
                     vehicle_type_name = self.vehicle_types[vehicle_type_index].get_name()
-                    #print(vehicle_type_name)
                     self.vehicle_types_table.setItem(i, 0, QTableWidgetItem(vehicle_type_name.capitalize()))
 
-
-        #day = str(self.cal.selectedDate().toString(Qt.ISODate))
         day = self.cal.selectedDate()
         day_before = day.addDays(-1).toString(Qt.ISODate)
         day = day.toString(Qt.ISODate)
-        #print(day)
 
         # start: from local 00:00:00 to utc (e.g. local 2021-04-01 00:00:00 = UTC 2021-03-31 22:00)
         # end: from local 23:59:00 to utc
-        bookings_start_datetime = datetime_to_UTC(day_before, "23:45", True)     #is_query = True
-        bookings_end_datetime = datetime_to_UTC(day, "23:59", True)   # 23:59 for include bookings of time xx:45, 23:45 is enough
         # bookings_start_datetime could be different from bookings_end_datetime (max 1 day)
-        #print("UTC - Start validity: ", bookings_start_datetime, " ; End validity: ", bookings_end_datetime, " ; Id parking lot: ", self.parking_lot.get_id())
+        bookings_start_datetime = datetime_to_UTC(day_before, "23:45", True)     # is_query = True
+        bookings_end_datetime = datetime_to_UTC(day, "23:59", True)   # 23:59 for include bookings of time xx:45, 23:45 is enough
 
         response = make_http_request(self.https_session, "get", "bookings", params = {"since":bookings_start_datetime, "until":bookings_end_datetime, "id_parking_lot":self.parking_lot.get_id()})
         if response.json():
             bookings = [Booking(**booking) for booking in response.json()]
 
-        # bookings are in UTC
-        #if bookings:
-            #print([f"{booking.get_datetime_start()} - {booking.get_datetime_end()}" for booking in bookings])
-
             for booking in bookings:
-                print("-----------------\n", booking)
-
+                # server bookings are in UTC
                 booking_start = datetime_UTC_to_local(booking.get_datetime_start())
-                print("Local booking start: ", booking_start)
+                booking_start = booking_start if booking_start.split()[0] == day else day + " 00:00:00"      # if booking start day in localtime is different from booking end day in localtime (booking on multiple days) select all table cells.
 
                 booking_end = datetime_UTC_to_local(booking.get_datetime_end())
-                print("Local booking end: ", booking_end)
-
-                booking_start = booking_start if booking_start.split()[0] == day else day + " 00:00:00"      # if booking start day in localtime is different from booking end day in localtime (booking on multiple days) select all table cells.
-                print("New start: ", booking_start)
-
                 # Set end time to 24:00:00 for bookings which end day is temporally subsequent to the selected day.
                 booking_end = booking_end if booking_end.split()[0] == day else day + " 24:00:00"
-                print("New end: ", booking_end)
 
                 # show booking in table
                 booking_start_time_split = booking_start.split()[1].split(":")          # list with booking time info
@@ -353,6 +321,7 @@ class Park(QWidget):
                     slot_index = self.parking_lot.get_parking_slots().index(ParkingSlot(id = booking.get_id_parking_slot()))
                 except ValueError:
                     return
+                    #continue
                 else:
                     table_row_index = self.parking_lot.get_parking_slots()[slot_index].get_number() - 1
 
@@ -377,8 +346,7 @@ class Park(QWidget):
 
     def get_booking_amount(self, utc_start_datetime_string, utc_end_datetime_string, slot_vehicle_type_id):
         # amount = hourly_rate * rate_percentage * time_interval
-
-        # hourly rate
+        # 1. hourly rate
         user_category_id = self.user.get_id_user_category()
         # obtain user_categories
         response = make_http_request(self.https_session, "get", "user_categories")
@@ -406,9 +374,7 @@ class Park(QWidget):
             else:
                 hourly_rate_amount = float(hourly_rates[hourly_rate_index].get_amount())
 
-        #print(hourly_rate_amount)
-
-        # rate_percentage
+        # 2. rate_percentage
         try:
             vehicle_type_index = self.vehicle_types.index(VehicleType(id = slot_vehicle_type_id))
         except ValueError:
@@ -416,11 +382,8 @@ class Park(QWidget):
         else:
             rate_percentage = float(self.vehicle_types[vehicle_type_index].get_rate_percentage())
 
-        #print(rate_percentage)
-
-        # time_inverval = utc_end_datetime_string - utc_start_datetime_string in secondi o minuti
+        # 3. time_inverval = utc_end_datetime_string - utc_start_datetime_string
         time_interval_seconds = (datetime.strptime(f"{utc_end_datetime_string}", "%Y-%m-%d %H:%M:%S") - datetime.strptime(f"{utc_start_datetime_string}", "%Y-%m-%d %H:%M:%S")).total_seconds()
-        #print(time_interval_seconds)
 
         booking_amount = "{:.2f}".format((hourly_rate_amount/3600) * rate_percentage * time_interval_seconds)
         return booking_amount
@@ -435,14 +398,11 @@ class Park(QWidget):
             QMessageBox.information(self, "uPark tip", "There aren't parking lots for your category!")
             return
 
-        print("********************")
         day = str(self.cal.selectedDate().toString(Qt.ISODate))
 
         # booking start and end in UTC
         utc_start_datetime_string = datetime_to_UTC(day, start_time)
         utc_end_datetime_string = datetime_to_UTC(day, end_time)
-
-        #print(utc_start_datetime_string, utc_end_datetime_string)
 
         # booking duration, work with timezone and daylight saving time
         booking_duration = (datetime.strptime(f"{utc_end_datetime_string}", "%Y-%m-%d %H:%M:%S") - datetime.strptime(f"{utc_start_datetime_string}", "%Y-%m-%d %H:%M:%S"))
@@ -455,7 +415,6 @@ class Park(QWidget):
 
         # obtain slot vehicle type name
         slot_vehicle_type = self.vehicle_types_table.item(self.tableWidget.currentRow(), 0).text()
-        #print(slot_vehicle_type)
 
         try:
             vehicle_type_index = self.vehicle_types.index(VehicleType(name = slot_vehicle_type.lower()))
@@ -466,18 +425,16 @@ class Park(QWidget):
 
         # it's necessary convert back from UTC to local time zone to handle daylight saving time
         booking_amount = self.get_booking_amount(utc_start_datetime_string, utc_end_datetime_string, slot_vehicle_type_id)
-        print(booking_amount)
 
         datetime_start = datetime_UTC_to_local(utc_start_datetime_string)
         datetime_end = datetime_UTC_to_local(utc_end_datetime_string)
+
         booking_dialog = BookingDialog(datetime_start, datetime_end, booking_duration, parking_slot_number, user_vehicles, slot_vehicle_type_id, booking_amount, self)
         # if clicked OK button
         if booking_dialog.exec_():
             vehicle = booking_dialog.selected_vehicle()
-
             if not vehicle:
                 return
-
             try:
                 vehicle_index = user_vehicles.index(Vehicle(license_plate = vehicle.split()[0]))
                 slot_index = self.parking_lot.get_parking_slots().index(ParkingSlot(number = parking_slot_number))
@@ -486,9 +443,6 @@ class Park(QWidget):
             else:
                 vehicle_id = user_vehicles[vehicle_index].get_id()
                 parking_slot_id = int(self.parking_lot.get_parking_slots()[slot_index].get_id())
-            #print(vehicle_id)
-            #print(self.parking_lot)
-
 
             booking =   {
                         "datetime_start": utc_start_datetime_string,
@@ -503,7 +457,9 @@ class Park(QWidget):
                 QMessageBox.information(self, "Booking response", json_response["message"] + "\nPrice: " + str(json_response["amount"]))
                 self.get_bookings(self.parking_lot, False)
 
+
     def showEvent(self, event):
+        self.get_vehicle_types()
         self.get_parking_lots()
         if self.parking_lots_list:
             self.cal.selectionChanged.connect(lambda : self.get_bookings(self.parking_lots[self.parking_lots_list.currentRow()], False))

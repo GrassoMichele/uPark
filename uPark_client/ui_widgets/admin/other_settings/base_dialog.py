@@ -1,8 +1,6 @@
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox, QFormLayout, \
                             QVBoxLayout, QHBoxLayout, QLineEdit, QComboBox
-
 from PyQt5.QtCore import Qt
-
 from convenience.server_apis import make_http_request
 
 
@@ -16,7 +14,6 @@ class BaseDialog(QDialog):
 
 
     def initUI(self):
-
         entity_name = self.entity_type.replace("_", " ")
         self.setWindowTitle("Add " + entity_name)
 
@@ -29,7 +26,9 @@ class BaseDialog(QDialog):
         layout.addWidget(self.text_lbl, 0, Qt.AlignCenter)
 
         self.form_layout = QFormLayout()
+
         layout.addLayout(self.form_layout)
         layout.addSpacing(20)
         layout.addWidget(self.buttonBox)
+
         self.setLayout(layout)

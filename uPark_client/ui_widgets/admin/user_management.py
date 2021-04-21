@@ -3,7 +3,6 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox, QTableWidget, QAbstractItemView, QPushButton, QCheckBox, \
                             QVBoxLayout, QDialog, QDialogButtonBox, QTableWidgetItem, QHeaderView, QFormLayout, \
                             QTabWidget, QLineEdit, QScrollArea, QListWidget
-
 from PyQt5.QtCore import Qt
 
 from convenience.server_apis import make_http_request
@@ -23,13 +22,11 @@ class DetailsDialog(QDialog):
         self.initUI()
 
     def initUI(self):
-
         self.state_changed = False
 
         self.setWindowTitle("User details")
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-
         buttonBox = QDialogButtonBox(QBtn)
         buttonBox.accepted.connect(self.edit_user)
         buttonBox.rejected.connect(self.reject)
@@ -37,7 +34,6 @@ class DetailsDialog(QDialog):
         layout = QVBoxLayout()
 
         tab_widget = QTabWidget()
-
         update_info_widget = QWidget()
 
         form_layout = QFormLayout()
@@ -62,10 +58,9 @@ class DetailsDialog(QDialog):
         tab_widget.addTab(UserVehiclesWidget(self.user, self.https_session), "Vehicles")
 
         layout.addWidget(tab_widget)
-
         layout.addSpacing(20)
-
         layout.addWidget(buttonBox)
+
         self.setLayout(layout)
 
 
@@ -75,6 +70,11 @@ class DetailsDialog(QDialog):
 
     def edit_user(self):
         if self.state_changed or self.password_le.text() != "":
+
+            if self.password_le.text() != "" and len(self.password_le.text()) < 8:
+                QMessageBox.information(self, "uPark tip", "Password must contains at least 8 characters!")
+                return
+
             user = {
                     "disability": self.disability_cb.isChecked(),
                     "password": None if self.password_le.text() == "" else self.password_le.text(),
@@ -112,6 +112,7 @@ class UserVehiclesWidget(QWidget):
         self.scroll_area.setWidgetResizable(True)
 
         self.scroll_area_content = QWidget()
+
         self.vbox_grp = QVBoxLayout()
 
         UserVehicles.get_user_vehicles(self)            # return self.user_vehicles
@@ -150,14 +151,12 @@ class UserVehiclesWidget(QWidget):
 
 
 class UserManagement(QWidget):
-
     def __init__(self, https_session):
         super().__init__()
         self.https_session = https_session
         self.initUI()
 
     def initUI(self):
-
         user_info = ["Email", "Name", "Surname", "Password", "Wallet", "Disability", "Active account", "User category"]
 
         vbox_main = QVBoxLayout()
@@ -177,13 +176,11 @@ class UserManagement(QWidget):
         self.users_table.horizontalHeader().setStretchLastSection(True);
 
         vbox_main.addWidget(self.users_table, 9)
-
         vbox_main.addStretch(1)
 
         self.setLayout(vbox_main)
 
         self.setWindowTitle(title)
-
         self.show()
 
 
@@ -217,7 +214,6 @@ class UserManagement(QWidget):
             self.users = []
 
         for row, user in enumerate(self.users):
-
             user_methods = [user.get_email, user.get_name, user.get_surname, user.get_password, user.get_wallet,
                             user.get_disability, user.get_active_account, self.get_user_category]
 

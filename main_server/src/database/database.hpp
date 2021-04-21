@@ -41,8 +41,8 @@ class Database {
         void db_init();
 
         bool user_existence_check(const User&, const std::string& upark_code, const std::string& category_name);
-
 };
+
 
 template<class T>
 std::string get_relation_name(T t) {
@@ -76,6 +76,7 @@ std::string get_relation_name(T t) {
     else
         return "null";
 }
+
 
 class DatabaseException : public std::exception {
     std::string _message;
@@ -172,11 +173,11 @@ void Database::update(const T& t){
     }
 }
 
+
 template<class T>
 void Database::delete_f(const int& id) {
     std::string relation_name = get_relation_name(T());
     try {
-
         pstmt.reset(connection->prepareStatement("DELETE FROM " + relation_name + " WHERE id = ?"));
         pstmt->setInt(1, id);
 
@@ -191,14 +192,15 @@ void Database::delete_f(const int& id) {
     }
 }
 
+
 template<class T>
 void Database::full_delete_f() {
     std::string relation_name = get_relation_name(T());
     try {
-
         pstmt.reset(connection->prepareStatement("DELETE FROM " + relation_name + " WHERE 1"));
 
         int success = pstmt->executeUpdate();
+
         if(success==0){
             throw DatabaseException(relation_name + " can't be deleted because not found in DB!");
         }

@@ -180,14 +180,14 @@ void put_ns::parking_lots_id(const http_request& request, const json::value& jso
 
           std::vector<int>::iterator it;
 
-          //reading vehicle_types, for-each vehicle type(key)     "1", "2" in  {"1":[], "2":[], ....}
+          // reading vehicle_types, for-each vehicle type(key)     "1", "2" in  {"1":[], "2":[], ....}
           for (VehicleType vt : vehicle_types) {
 
               try {
                   json::array slots_per_vehicle_types = json_obj.at(std::to_string(vt.getId())).as_array();
                   std::vector<int> slvt;                // slots per vehicle types
 
-                  //putting json::array in a vector<int>
+                  // putting json::array in a vector<int>
                   for (int i = 0; i < slots_per_vehicle_types.size(); i++){
                       slvt.push_back(slots_per_vehicle_types.at(i).as_number().to_int64());
                   }
@@ -207,7 +207,7 @@ void put_ns::parking_lots_id(const http_request& request, const json::value& jso
           }
       }
 
-      //Categories allowed for parking lot
+      // Categories allowed for parking lot
       if(!json_request.at("categories_allowed").is_null()) {
 
           // json : {"id_user_category":true, "id_user_category":false, ...}
@@ -222,7 +222,6 @@ void put_ns::parking_lots_id(const http_request& request, const json::value& jso
 
           // Looping throw all cathegories
           for (UserCategory us : mapperUC.Read_all()) {
-
               bool requested_user_category;
 
               // try to find the id_user_category in json (key)
@@ -254,7 +253,6 @@ void put_ns::parking_lots_id(const http_request& request, const json::value& jso
       }
 
       request.reply(status_codes::OK, "Parking lot updated!");
-
     }
     else {
         request.reply(status_codes::Unauthorized, "Only admin can update parking lots!");

@@ -14,9 +14,9 @@ void UserCategory::setId(int id){
     this->id = id;
 }
 
-void UserCategory::setName(std::string name){
-  this->name = name;
-}
+// void UserCategory::setName(std::string name){
+//   this->name = name;
+// }
 
 void UserCategory::setIdHourlyRate(int id_hourly_rate){
     this->id_hourly_rate = id_hourly_rate;
@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream& os, const UserCategory& uc)
     return os;
 }
 
-UserCategoryException::UserCategoryException(const std::string & message):_message(message) {}
-const char * UserCategoryException::what() const throw() {
-      return _message.c_str();
-}
+// UserCategoryException::UserCategoryException(const std::string & message):_message(message) {}
+// const char * UserCategoryException::what() const throw() {
+//       return _message.c_str();
+// }

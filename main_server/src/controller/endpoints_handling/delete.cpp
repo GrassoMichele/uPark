@@ -74,7 +74,7 @@ void delete_ns::parking_lots_id(const web::http::http_request& request, const we
 
     if (requesting_user_category == "Admin") {
 
-      //Delete parking slots of requested parking lot
+      // Get parking slots of requested parking lot
       std::vector<ParkingSlot> parking_slots = mapperPS.Read_all();
 
       parking_slots.erase(std::remove_if(parking_slots.begin(), parking_slots.end(), [requested_parking_lot_id](const ParkingSlot& ps)
@@ -82,11 +82,35 @@ void delete_ns::parking_lots_id(const web::http::http_request& request, const we
               return (ps.getIdParkingLot() != requested_parking_lot_id);
           }), parking_slots.end());
 
+
+      // Get all bookings associated with requested parking lot
+      std::vector<Booking> bookings = mapperB.Read_all();
+      bookings.erase(std::remove_if(bookings.begin(), bookings.end(), [&parking_slots](const Booking& b)
+          {
+              std::vector<ParkingSlot>::iterator it;
+              it = std::find_if(parking_slots.begin(), parking_slots.end(), [&b](const ParkingSlot& ps) {
+                  return (b.getIdParkingSlot() == ps.getId());
+              });
+
+              // if iterator == end means that booking slot wasn't found among the slots of the parking lot
+              // so the booking can be erased because it's of no interest.
+              return (it == parking_slots.end());
+
+          }), bookings.end());
+
+      // Delete bookings
+      for (Booking b : bookings){
+          mapperB.Delete(b.getId());
+      }
+
+
+      // Delete parking slots
       for (ParkingSlot ps : parking_slots){
           mapperPS.Delete(ps.getId());
       }
 
-      //Delete all records in parkig_lots_user_categories_allowed of the requested parking_lot
+
+      // Delete all records in parkig_lots_user_categories_allowed of the requested parking_lot
       std::vector<ParkingCategoriesAllowed> parking_categories_allowed = mapperPCA.Read_all();
 
       parking_categories_allowed.erase(std::remove_if(parking_categories_allowed.begin(), parking_categories_allowed.end(), [requested_parking_lot_id](const ParkingCategoriesAllowed& pca)
@@ -98,7 +122,7 @@ void delete_ns::parking_lots_id(const web::http::http_request& request, const we
           mapperPCA.Delete(pca.getId());
       }
 
-      //Delete of the requested parking_lot
+      // Delete of the requested parking_lot
       mapperPL.Delete(requested_parking_lot_id);
 
       request.reply(status_codes::OK, "Parking lot deleted!");

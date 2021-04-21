@@ -12,16 +12,16 @@ Vehicle::Vehicle(int id, std::string license_plate, std::string brand, std::stri
                                                       {}
 
 void Vehicle::setId(int id){
-  this->id = id;
+    this->id = id;
 }
 
-void Vehicle::setLicensePlate(std::string license_plate){
-  this->license_plate = license_plate;
-}
-
-void Vehicle::setIdUser(int id_user){
-    this->id_user = id_user;
-}
+// void Vehicle::setLicensePlate(std::string license_plate){
+//     this->license_plate = license_plate;
+// }
+//
+// void Vehicle::setIdUser(int id_user){
+//     this->id_user = id_user;
+// }
 
 int Vehicle::getId() const{
     return id;
@@ -59,7 +59,7 @@ std::ostream& operator<<(std::ostream& os, const Vehicle& v)
     return os;
 }
 
-VehicleException::VehicleException(const std::string & message):_message(message) {}
-const char * VehicleException::what() const throw() {
-      return _message.c_str();
-}
+// VehicleException::VehicleException(const std::string & message):_message(message) {}
+// const char * VehicleException::what() const throw() {
+//       return _message.c_str();
+// }

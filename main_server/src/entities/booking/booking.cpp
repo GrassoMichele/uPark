@@ -28,9 +28,9 @@ void Booking::setExitTime(std::string exit_time){
     this->exit_time = exit_time;
 }
 
-void Booking::setAmount(float amount){
-    this->amount = amount;
-}
+// void Booking::setAmount(float amount){
+//     this->amount = amount;
+// }
 
 void Booking::setNote(std::string note) {
     this->note = note;
@@ -93,7 +93,7 @@ std::ostream& operator<<(std::ostream& os, const Booking& b)
     return os;
 }
 
-BookingException::BookingException(const std::string & message):_message(message) {}
-const char * BookingException::what() const throw() {
-      return _message.c_str();
-}
+// BookingException::BookingException(const std::string & message):_message(message) {}
+// const char * BookingException::what() const throw() {
+//       return _message.c_str();
+// }

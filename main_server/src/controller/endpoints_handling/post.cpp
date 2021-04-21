@@ -146,7 +146,7 @@ void post_ns::users_id_vehicles(const web::http::http_request& request, const we
         );
 
         int vehicle_id = mapperV.Create(v);
-        response["message"] = json::value::string("Vehicle successfully added!");     //provare a togliere
+        response["message"] = json::value::string("Vehicle successfully added!");
         response["id"] = json::value::number(vehicle_id);
 
         request.reply(status_codes::Created, response);
@@ -219,7 +219,7 @@ bool booking_time_overlapping_check(const time_t, const time_t, const int, const
 void post_ns::users_id_bookings(const web::http::http_request& request, const web::json::value& json_request, const User& authenticated_user){
     User requesting_user=authenticated_user;
 
-    //check requesting_user = requested_user
+    // check requesting_user = requested_user
     int requested_user_id = std::stoi(uri::split_path(uri::decode(request.relative_uri().path()))[1]);
 
     if (requesting_user.getId() != requested_user_id){
@@ -227,19 +227,19 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         return;
     }
 
-    //active_account check
+    // active_account check
     if (requesting_user.getActiveAccount() != true) {
         request.reply(status_codes::Unauthorized, "OPS! Account is not active, contact uPark admin.");
         return;
     }
 
-    //wallet not empty check
+    // wallet not empty check
     if (requesting_user.getWallet() <= 0) {
         request.reply(status_codes::BadRequest, "OPS! Wallet is empty, add some money first!");
         return;
     }
 
-    //vehicle user ownership check
+    // vehicle user ownership check
     int id_vehicle = json_request.at("id_vehicle").as_number().to_int64();
     Vehicle vehicle = mapperV.Read(id_vehicle);
 
@@ -248,7 +248,7 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         return;
     }
 
-    //check if the cathegory of the user is allowed to the parking lot
+    // check if the cathegory of the user is allowed to the parking lot
     int id_parking_slot = json_request.at("id_parking_slot").as_number().to_int64();
 
     ParkingSlot parking_slot = mapperPS.Read(id_parking_slot);
@@ -267,19 +267,19 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         return;
     }
 
-    //check if the vehicle type is the same of the parking slot vehicle type allowed
+    // check if the vehicle type is the same of the parking slot vehicle type allowed
     if(parking_slot.getIdVehicleType() != vehicle.getIdVehicleType()){
         request.reply(status_codes::BadRequest, "Selected parking slot isn't of the same type of selected vehicle type!");
         return;
     }
 
-    //check if the selected slot is disability reserved and user can occupy that
+    // check if the selected slot is disability reserved and user can occupy that
     if(parking_slot.getReservedDisability() == true && requesting_user.getDisability() == false){
         request.reply(status_codes::BadRequest, "Selected parking slot is reserved only for Disabled people!");
         return;
     }
 
-    //check that datetime_start is not in the past
+    // check that datetime_start is not in the past
     std::string datetime_start = json_request.at("datetime_start").as_string();
     std::string datetime_end = json_request.at("datetime_end").as_string();
 
@@ -299,7 +299,7 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         datetime_start_struct = *(gmtime(&datetime_start_time));
     }
 
-    //is it a future date?
+    // is it a future date?
     double seconds = difftime(timegm(&datetime_start_struct), timegm(&now));
 
     if (seconds <= 0) {
@@ -313,7 +313,7 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
 
     seconds = difftime(timegm(&datetime_end_struct),timegm(&datetime_start_struct));
 
-    //is datetime_end previous to datetime_start?
+    // is datetime_end previous to datetime_start?
     if (seconds <= 0) {
         request.reply(status_codes::BadRequest, "Datetime_end is previous or equals to datetime_start!");
         return;
@@ -330,13 +330,16 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
     time_t datetime_start_time = timegm(&datetime_start_struct);
     time_t datetime_end_time = timegm(&datetime_end_struct);
 
-    //datetime_start is free of bookings in the requested slot (included 15 minutes of delay for the removing of vehicle)
+    // datetime_start is free of bookings in the requested slot (included 15 minutes of delay for the removing of vehicle)
     std::vector<Booking> bookings = mapperB.Read_all();
 
-    //filtering booking for selected parking slot
+    // filtering booking for selected parking slot
     bookings.erase(std::remove_if(bookings.begin(), bookings.end(), [id_parking_slot](const Booking& b)
         {
-            return (b.getIdParkingSlot() != id_parking_slot);
+            if (b.getIdParkingSlot() != 0)        // not null
+                return (b.getIdParkingSlot() != id_parking_slot);
+            else
+                return true;
         }), bookings.end());
 
     std::vector<Booking>::iterator it_b;
@@ -354,10 +357,13 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
     // check that the user does not have another reservation on the same park (different park slot) in overlapping time intervals.
     bookings = mapperB.Read_all();
 
-    //filtering booking for selected parking lot and user
+    // filtering booking for selected parking lot and user
     bookings.erase(std::remove_if(bookings.begin(), bookings.end(), [requested_user_id, id_parking_lot](const Booking& b)
         {
-            return (b.getIdUser() != requested_user_id || mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot);
+            if (b.getIdParkingSlot() != 0)        // not null
+                return (b.getIdUser() != requested_user_id || mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot);
+            else
+                return true;
         }), bookings.end());
 
 
@@ -372,7 +378,7 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
     }
 
     // Calculate booking amount
-    // hourly_rate * ratepercentage * duration
+    // hourly_rate * rate_percentage * duration
     UserCategory user_category = mapperUC.Read(requesting_user.getIdUserCategory());
     int id_hourly_rate = user_category.getIdHourlyRate();
     HourlyRate hourly_rate = mapperH.Read(id_hourly_rate);
@@ -383,10 +389,9 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
 
     double time_interval_seconds = difftime(datetime_end_time, datetime_start_time);
 
-    // amount_parziale = hourly_rate/3600 * durata_in_secondi
     float booking_amount = time_interval_seconds * (hourly_rate_amount/3600) * rate_percentage;
 
-    //check if user's wallet has enough money
+    // check if user's wallet has enough money
     if (requesting_user.getWallet() < booking_amount) {
         request.reply(status_codes::BadRequest, "OPS! You don't have enough money, please add first!");
         return;
@@ -409,7 +414,7 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
         mapperU.Update(admin);
     }
 
-    //Booking creation handling
+    // Booking creation handling
     std::ostringstream os;
     os << std::put_time(&datetime_start_struct, "%F %T");
     std::string str_datetime_start = os.str();
@@ -451,21 +456,44 @@ void post_ns::users_id_bookings(const web::http::http_request& request, const we
 
 // POST crossing
 void post_ns::crossing(const web::http::http_request& request, const web::json::value& json_request, const User& authenticated_user){
-    if (json_request.at("auth_token").as_string() == "UHJvY2Vzc2luZ1NlcnZlcg=="){   // "ProcessingServer" in base64
-
-        std::string license_plate = json_request.at("license_plate").as_string();
-        int id_parking_lot = json_request.at("id_parking_lot").as_number().to_int64();
-        std::string crossing_type = json_request.at("crossing_type").as_string();
+    if (json_request.at("auth_token").as_string() == "UHJvY2Vzc2luZ1NlcnZlcg==") {   // "ProcessingServer" in base64
 
         json::value response = json::value::object(true);
+
+        std::string license_plate = json_request.at("license_plate").as_string();
+
+        // from parking_lot name to parking_lot id
+        int id_parking_lot;
+        std::string parking_lot_name = json_request.at("parking_lot_name").as_string();
+
+        std::vector<ParkingLot> parking_lots = mapperPL.Read_all();
+        std::vector<ParkingLot>::iterator it_pl;
+
+        it_pl = std::find_if(std::begin(parking_lots), std::end(parking_lots), [parking_lot_name](const ParkingLot& pl) {
+            if (pl.getName() == parking_lot_name)
+                return true;
+            else
+                return false;
+        });
+
+        if (it_pl != std::end(parking_lots)) {
+            id_parking_lot = it_pl->getId();
+        }
+        else {
+            response["open"] = json::value::boolean(false);
+            response["message"] = json::value::string("Ops! Can't find a parking lot with name: " + parking_lot_name + ".");
+            request.reply(status_codes::InternalError, response);
+            return;
+        }
+
+        std::string crossing_type = json_request.at("crossing_type").as_string();
 
         std::vector<Booking> bookings = mapperB.Read_all();
         std::vector<Booking>::iterator it;
 
         time_t current_datetime = time(0);
 
-        it = std::find_if(std::begin(bookings), std::end(bookings), [current_datetime, license_plate, id_parking_lot, crossing_type](const Booking& b)
-        {
+        it = std::find_if(std::begin(bookings), std::end(bookings), [current_datetime, license_plate, id_parking_lot, crossing_type](const Booking& b) {
             struct tm existing_b_start_struct;
             std::istringstream bdts(b.getDateTimeStart());
             bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
@@ -479,7 +507,7 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
                 return false;
 
             // check on parking lot
-            else if (b.getIdParkingSlot() != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot)
+            else if (b.getIdParkingSlot() != 0 && mapperPS.Read(b.getIdParkingSlot()).getIdParkingLot() != id_parking_lot)      // b.getIdParkingSlot() != 0 means not null
                 return false;
 
             // check on time, entry allowed 5 minutes before booking starts.
@@ -494,7 +522,7 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
 
         if (it != std::end(bookings)){
             std::ostringstream os;
-            os << std::put_time(gmtime(&current_datetime), "%T");
+            os << std::put_time(gmtime(&current_datetime), "%Y-%m-%d %T");
             std::string current_datetime_str = os.str();
 
             if (crossing_type == "entry") {
@@ -521,9 +549,9 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
             }
         }
         else {
-          response["open"] = json::value::boolean(false);
-          response["message"] = json::value::string("Ops! Can't find appropriate booking for the vehicle.");
-          request.reply(status_codes::InternalError, response);
+            response["open"] = json::value::boolean(false);
+            response["message"] = json::value::string("Ops! Can't find appropriate booking for the vehicle.");
+            request.reply(status_codes::InternalError, response);
         }
     }
     else {
@@ -534,7 +562,7 @@ void post_ns::crossing(const web::http::http_request& request, const web::json::
 
 // function that checks for booking overlapping temporally
 bool booking_time_overlapping_check(const time_t datetime_start_time, const time_t datetime_end_time, const int requested_user_id, const int id_vehicle, const Booking& b) {
-    //existing booking start_time ad end_time from string to time_t
+    // existing booking start_time ad end_time from string to time_t
     struct tm existing_b_start_struct;
     std::istringstream bdts(b.getDateTimeStart());
     bdts >> std::get_time(&existing_b_start_struct, "%Y-%m-%d %T");
@@ -547,15 +575,15 @@ bool booking_time_overlapping_check(const time_t datetime_start_time, const time
 
     int time_between_bookings = requested_user_id == b.getIdUser() ? 0 : (15*60);             // 0 to allow same user to make contiguous bookings
 
-    //cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
+    // cheking if requested booking (-15 minutes) starts before the ending of temporally earlier bookings or requested booking is contained inside an existing one
     if (difftime((datetime_start_time - time_between_bookings), existing_b_end_time) < 0 && difftime(existing_b_start_time, datetime_start_time) < 0){
         return true;
     }
-    //cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
+    // cheking if requested booking (+15 minutes) ends before the start of temporally subsequent bookings or requested booking contains an existing ones
     else if (difftime((datetime_end_time + time_between_bookings), existing_b_start_time) > 0 && difftime(datetime_start_time, existing_b_start_time) < 0 ){
         return true;
     }
-    //cheking if existing booking is overlapping with the requested booking
+    // cheking if existing booking is overlapping with the requested booking
     else if (difftime(existing_b_start_time, datetime_start_time) == 0 && difftime(existing_b_end_time, datetime_end_time) == 0){
         return true;
     }

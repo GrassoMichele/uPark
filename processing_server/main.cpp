@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -57,6 +58,7 @@ bool make_request(http_client& client, const json::value& json_body) {
     catch (http_exception& e) {
         std::cout << e.what() << std::endl;
     }
+
     return open;
 }
 
@@ -83,7 +85,8 @@ void receive_image(const int connection_socket, http_client& client, const struc
     std::cout << "Established new connection with client: " << inet_ntoa(client_address.sin_addr) << " on port: "
           << ntohs(client_address.sin_port) << std::endl;
 
-    image_name = std::to_string(it->at("id_parking_lot").as_number().to_int64()) + "_" + it->at("crossing_type").as_string();
+    image_name = it->at("parking_lot_name").as_string() + "_" + it->at("crossing_type").as_string();
+    std::replace(image_name.begin(), image_name.end(), ' ', '_');
 
     while (!server_termination) {
         total_received_size = 0;
@@ -179,11 +182,11 @@ void receive_image(const int connection_socket, http_client& client, const struc
 
                     std::string license_plate = v.at("results")[0]["plate"].as_string();
                     std::cout << "Processing completed!" << std::endl;
-                    std::cout << "License_plate: " << license_plate << std::endl;
+                    std::cout << "License plate: " << license_plate << std::endl;
 
                     json::value json_body = json::value::object(true);
                     json_body["license_plate"] = json::value::string(U(license_plate));
-                    json_body["id_parking_lot"] = json::value::number(it->at("id_parking_lot").as_number().to_int64());
+                    json_body["parking_lot_name"] = json::value::string(it->at("parking_lot_name").as_string());
                     json_body["crossing_type"] = json::value::string(it->at("crossing_type").as_string());
                     json_body["auth_token"] = json::value::string("UHJvY2Vzc2luZ1NlcnZlcg==");
 
@@ -297,6 +300,7 @@ void server_shutdown(std::vector<std::tuple<std::thread, int>>& sockets_opened){
 
     std::cout << "Bye!" << std::endl;
 }
+
 
 int main(int argc, const char *argv[])
 {

@@ -8,11 +8,11 @@ class ParkingCategoriesAllowed:
     def set_id(self, id):
         self._id = id
 
-    def set_id_parking_lot(self, id_parking_lot):
-        self._id_parking_lot = id_parking_lot
-
-    def set_id_user_category(self, id_user_category):
-        self._id_user_category = id_user_category
+    # def set_id_parking_lot(self, id_parking_lot):
+    #     self._id_parking_lot = id_parking_lot
+    #
+    # def set_id_user_category(self, id_user_category):
+    #     self._id_user_category = id_user_category
 
 
     def get_id(self):

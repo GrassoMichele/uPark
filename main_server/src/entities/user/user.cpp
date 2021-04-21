@@ -19,17 +19,17 @@ void User::setId(int id){
     this->id = id;
 }
 
-void User::setEmail(std::string email){
-    this->email = email;
-}
-
-void User::setName(std::string name){
-    this->name = name;
-}
-
-void User::setSurname(std::string surname){
-    this->surname = surname;
-}
+// void User::setEmail(std::string email){
+//     this->email = email;
+// }
+//
+// void User::setName(std::string name){
+//     this->name = name;
+// }
+//
+// void User::setSurname(std::string surname){
+//     this->surname = surname;
+// }
 
 void User::setPassword(std::string password){
     this->password = password;
@@ -47,9 +47,9 @@ void User::setActiveAccount(bool active_account){
     this->active_account = active_account;
 }
 
-void User::setIdUserCategory(int id_user_category){
-    this->id_user_category = id_user_category;
-}
+// void User::setIdUserCategory(int id_user_category){
+//     this->id_user_category = id_user_category;
+// }
 
 
 int User::getId() const{

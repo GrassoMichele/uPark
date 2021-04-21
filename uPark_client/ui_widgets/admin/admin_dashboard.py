@@ -7,10 +7,11 @@ from .user_management import UserManagement
 
 from ..dashboard import Dashboard
 
+
 class AdminDashboard(Dashboard):
 
     def __init__(self, user):
-        button_names = ["Parking Management", "Bookings in Progress", "Bookings Expired", "Other settings", "User Management", "Profile", "Logout"] #income
+        button_names = ["Parking Management", "Bookings in Progress", "Bookings Expired", "Other settings", "User Management", "Profile", "Logout"]
         super().__init__(user, button_names)
         self.initUI()
 

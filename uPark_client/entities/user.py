@@ -14,14 +14,14 @@ class User:
     def set_id(self, id):
         self._id = id
 
-    def set_email(self, email):
-        self._email = email
+    # def set_email(self, email):
+    #     self._email = email
 
-    def set_name(self, name):
-        self._name = name
+    # def set_name(self, name):
+    #     self._name = name
 
-    def set_surname(self, surname):
-        self._surname = surname
+    # def set_surname(self, surname):
+    #     self._surname = surname
 
     def set_password(self, password):
         self._password = password
@@ -35,8 +35,8 @@ class User:
     def set_active_account(self, active_account):
         self._active_account = active_account
 
-    def set_id_user_category(self, id_user_category):
-        self._id_user_category = id_user_category
+    # def set_id_user_category(self, id_user_category):
+    #     self._id_user_category = id_user_category
 
 
     def get_id(self):

@@ -10,19 +10,19 @@
 
 extern Database db;
 
-template< class T >
+template<class T>
 class DataMapper : public DataMapperInterface<T> {
     using DataMapperInterface<T>::cache_unit;
 
     public:
         DataMapper();
 
-        std::vector<T>& Read_all();
-        T& Read(int);
-        int Create(T&);
-        void Update(T&);
-        void Delete(int);
-        void Delete_all();
+        std::vector<T>& Read_all() override;
+        T& Read(int) override;
+        int Create(T&) override;
+        void Update(T&) override;
+        void Delete(int) override;
+        void Delete_all() override;
 
         int getCacheUnitSize();
 };
@@ -162,25 +162,23 @@ void DataMapper<T>::Delete(int id) {
 
 template<class T>
 void DataMapper<T>::Delete_all(){
-  std::string relation_name = get_relation_name(T());
-  try {
-      //remove from db
-      db.full_delete_f<T>();
+    std::string relation_name = get_relation_name(T());
+    try {
+        //remove from db
+        db.full_delete_f<T>();
+        //remove from cache
+        cache_unit.erase(cache_unit.begin(), cache_unit.end());
 
-      //remove from cache (Erase–remove idiom)
-      cache_unit.erase(cache_unit.begin(), cache_unit.end());
-
-      std::cout << "All records in "+ relation_name + " deleted!" << std::endl;
-  }
-  catch(DatabaseException& e) {
-      std::cout << e.what()<< std::endl;
-      throw DataMapperException("Full-Delete failed!");
-  }
-  catch(std::exception& e) {
-      std::cout << e.what() << std::endl;
-      throw DataMapperException("Full-Delete failed!");
-  }
+        std::cout << "All records in "+ relation_name + " deleted!" << std::endl;
+    }
+    catch(DatabaseException& e) {
+        std::cout << e.what()<< std::endl;
+        throw DataMapperException("Full-Delete failed!");
+    }
+    catch(std::exception& e) {
+        std::cout << e.what() << std::endl;
+        throw DataMapperException("Full-Delete failed!");
+    }
 }
-
 
 #endif

@@ -15,10 +15,12 @@ from convenience.server_apis import make_http_request
 from ui_widgets.user.user_dashboard import UserDashboard
 from ui_widgets.admin.admin_dashboard import AdminDashboard
 
+
 class Login_signals(QObject):
     close = pyqtSignal()
     home_close = pyqtSignal()
     logout = pyqtSignal()
+
 
 class Login(QWidget):
     def __init__(self):
@@ -53,9 +55,6 @@ class Login(QWidget):
         self.login_btn = QPushButton("Login!")
         self.login_btn.clicked.connect(self.login_submit)
 
-        self.email_le.setText("admin@admin")
-        self.password_le.setText("admin")
-
         formLayout.addRow("Email: ", self.email_le)
         formLayout.addRow("Password: ",  hbox)
 
@@ -86,7 +85,6 @@ class Login(QWidget):
 
 
     def login_submit(self):
-
         self.https_session.auth = (self.email_le.text(), self.password_le.text())
 
         response = make_http_request(self.https_session, "get", "login")
@@ -97,8 +95,6 @@ class Login(QWidget):
 
             del response_json["message"]                      # call del to make the response_json matches with User constructor
             user = User(**response_json)                      # dictionary unpacking
-
-            #print(user)
 
             response_user_categories = make_http_request(self.https_session, "get", "user_categories", show_messagebox = False)
 
@@ -125,4 +121,3 @@ class Login(QWidget):
 
             else:
                 QMessageBox.critical(None, "Alert", "Server error. Retry later.")
-                #self.signals.close.emit()

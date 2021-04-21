@@ -1,12 +1,10 @@
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox, QFormLayout, \
                             QVBoxLayout, QHBoxLayout, QLineEdit, QComboBox
-
 from PyQt5.QtCore import Qt
 
 from convenience.server_apis import make_http_request
 
 from .add_dialogs import AddHourlyRateDialog, AddVehicleTypeDialog
-
 from .base_dialog import BaseDialog
 
 
@@ -16,7 +14,6 @@ class EditHourlyRateDialog(AddHourlyRateDialog):
         self.selected_item_id = selected_item_id
         self.initUI()
 
-
     def initUI(self):
         entity_name = self.entity_type.replace("_", " ")
         self.setWindowTitle("Edit " + entity_name)
@@ -24,16 +21,18 @@ class EditHourlyRateDialog(AddHourlyRateDialog):
         self.text_lbl.setText("<i>Please, edit " + entity_name + " info:</i>")
         self.buttonBox.disconnect()                           # disconnect all object signals from their slots. We need it to remove BaseDialog slot for accepted signal.
         self.buttonBox.accepted.connect(self.edit_hourly_rate)
+        self.buttonBox.rejected.connect(self.reject)
 
 
     def edit_hourly_rate(self):
-        hourly_rate = {"amount": self.amount_le.text()}
-        response = make_http_request(self.https_session, "put", "hourly_rates/" + str(self.selected_item_id), json = hourly_rate)
-        if response:
-            QMessageBox.information(self, "Server response", response.text)
-            self.done(0)
-        else:
-            self.done(1)
+        if self.form_validator(self.amount_le.text()):
+            hourly_rate = {"amount": self.amount_le.text()}
+            response = make_http_request(self.https_session, "put", "hourly_rates/" + str(self.selected_item_id), json = hourly_rate)
+            if response:
+                QMessageBox.information(self, "Server response", response.text)
+                self.done(0)
+            else:
+                self.done(1)
 
 
 class EditVehicleTypeDialog(AddVehicleTypeDialog):
@@ -42,7 +41,6 @@ class EditVehicleTypeDialog(AddVehicleTypeDialog):
         self.selected_item_id = selected_item_id
         self.initUI()
 
-
     def initUI(self):
         entity_name = self.entity_type.replace("_", " ")
         self.setWindowTitle("Edit " + entity_name)
@@ -50,19 +48,21 @@ class EditVehicleTypeDialog(AddVehicleTypeDialog):
         self.text_lbl.setText("<i>Please, edit " + entity_name + " info:</i>")
         self.buttonBox.disconnect()                           # disconnect all object signals from their slots. We need it to remove BaseDialog slot for accepted signal.
         self.buttonBox.accepted.connect(self.edit_vehicle_type)
+        self.buttonBox.rejected.connect(self.reject)
 
 
     def edit_vehicle_type(self):
-        vehicle_type = {
-                        "name": self.name_le.text(),
-                        "rate_percentage": self.rate_percentage_le.text()
-                        }
-        response = make_http_request(self.https_session, "put", "vehicle_types/" + str(self.selected_item_id), json = vehicle_type)
-        if response:
-            QMessageBox.information(self, "Server response", response.text)
-            self.done(0)
-        else:
-            self.done(1)
+        if self.form_validator(self.name_le.text(), self.rate_percentage_le.text()):
+            vehicle_type = {
+                            "name": self.name_le.text(),
+                            "rate_percentage": self.rate_percentage_le.text()
+                            }
+            response = make_http_request(self.https_session, "put", "vehicle_types/" + str(self.selected_item_id), json = vehicle_type)
+            if response:
+                QMessageBox.information(self, "Server response", response.text)
+                self.done(0)
+            else:
+                self.done(1)
 
 
 class EditUserCategoryDialog(BaseDialog):
