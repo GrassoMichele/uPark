@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 4.9.5deb2
+-- version 5.0.4
 -- https://www.phpmyadmin.net/
 --
 -- Host: upark-server-db.mysql.database.azure.com:3306
--- Creato il: Mar 24, 2021 alle 10:51
--- Versione del server: 8.0.15
--- Versione PHP: 7.4.3
+-- Generation Time: Apr 22, 2021 at 07:37 AM
+-- Server version: 8.0.15
+-- PHP Version: 8.0.2
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -21,11 +20,13 @@ SET time_zone = "+00:00";
 --
 -- Database: `db_university`
 --
+CREATE DATABASE IF NOT EXISTS `db_university` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `db_university`;
 
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `upark_users`
+-- Table structure for table `upark_users`
 --
 
 CREATE TABLE `upark_users` (
@@ -35,10 +36,19 @@ CREATE TABLE `upark_users` (
   `id_user_category` int(10) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT TABLESPACE `innodb_system`;
 
+--
+-- Dumping data for table `upark_users`
+--
+
+INSERT INTO `upark_users` (`id`, `email`, `upark_code`, `id_user_category`) VALUES
+(1, 'antonio@gmail.com', 'RS2213RT', 1),
+(2, 'giulia@live.it', 'FGH766TI', 2),
+(7, 'tecnico@tecnico.it', 'UPARK9', 6);
+
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `user_categories`
+-- Table structure for table `user_categories`
 --
 
 CREATE TABLE `user_categories` (
@@ -47,11 +57,25 @@ CREATE TABLE `user_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT TABLESPACE `innodb_system`;
 
 --
--- Indici per le tabelle scaricate
+-- Dumping data for table `user_categories`
+--
+
+INSERT INTO `user_categories` (`id`, `name`) VALUES
+(4, 'Giardiniere'),
+(8, 'Guardiola'),
+(5, 'Operatore ecologico'),
+(2, 'Professore'),
+(7, 'Segreteria'),
+(3, 'Stagista'),
+(1, 'Studente'),
+(6, 'Tecnico');
+
+--
+-- Indexes for dumped tables
 --
 
 --
--- Indici per le tabelle `upark_users`
+-- Indexes for table `upark_users`
 --
 ALTER TABLE `upark_users`
   ADD PRIMARY KEY (`id`),
@@ -60,34 +84,34 @@ ALTER TABLE `upark_users`
   ADD KEY `id_categoria_utente` (`id_user_category`);
 
 --
--- Indici per le tabelle `user_categories`
+-- Indexes for table `user_categories`
 --
 ALTER TABLE `user_categories`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `nome` (`name`);
 
 --
--- AUTO_INCREMENT per le tabelle scaricate
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT per la tabella `upark_users`
+-- AUTO_INCREMENT for table `upark_users`
 --
 ALTER TABLE `upark_users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT per la tabella `user_categories`
+-- AUTO_INCREMENT for table `user_categories`
 --
 ALTER TABLE `user_categories`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- Limiti per le tabelle scaricate
+-- Constraints for dumped tables
 --
 
 --
--- Limiti per la tabella `upark_users`
+-- Constraints for table `upark_users`
 --
 ALTER TABLE `upark_users`
   ADD CONSTRAINT `upark_users_ibfk_1` FOREIGN KEY (`id_user_category`) REFERENCES `user_categories` (`id`) ON UPDATE CASCADE;

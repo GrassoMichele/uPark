@@ -1,14 +1,13 @@
 -- phpMyAdmin SQL Dump
--- version 4.9.5deb2
+-- version 5.0.4
 -- https://www.phpmyadmin.net/
 --
 -- Host: upark-server-db.mysql.database.azure.com:3306
--- Creato il: Mar 24, 2021 alle 10:53
--- Versione del server: 8.0.15
--- Versione PHP: 7.4.3
+-- Generation Time: Apr 22, 2021 at 07:35 AM
+-- Server version: 8.0.15
+-- PHP Version: 8.0.2
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -21,68 +20,32 @@ SET time_zone = "+00:00";
 --
 -- Database: `db_upark`
 --
+CREATE DATABASE IF NOT EXISTS `db_upark` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `db_upark`;
 
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `bookings`
+-- Table structure for table `bookings`
 --
 
 CREATE TABLE `bookings` (
   `id` int(11) NOT NULL,
   `datetime_start` timestamp NOT NULL,
   `datetime_end` timestamp NOT NULL,
-  `entry_time` time DEFAULT NULL,
-  `exit_time` time DEFAULT NULL,
+  `entry_time` timestamp NULL DEFAULT NULL,
+  `exit_time` timestamp NULL DEFAULT NULL,
   `amount` decimal(6,2) NOT NULL,
   `id_user` int(11) DEFAULT NULL,
   `id_vehicle` int(11) DEFAULT NULL,
-  `id_parking_slot` int(11) DEFAULT NULL,
+  `id_parking_slot` int(11) NOT NULL,
   `note` varchar(500) CHARACTER SET latin1 COLLATE latin1_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 TABLESPACE `innodb_system`;
 
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `events`
---
-
-CREATE TABLE `events` (
-  `id` int(11) NOT NULL,
-  `name` varchar(20) NOT NULL,
-  `upark_code` varchar(10) NOT NULL,
-  `validity_start` timestamp NOT NULL,
-  `validity_end` timestamp NOT NULL,
-  `id_event_type` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 TABLESPACE `innodb_system`;
-
--- --------------------------------------------------------
-
---
--- Struttura della tabella `event_participations`
---
-
-CREATE TABLE `event_participations` (
-  `id_guest_user` int(11) NOT NULL,
-  `id_event` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 TABLESPACE `innodb_system`;
-
--- --------------------------------------------------------
-
---
--- Struttura della tabella `event_types`
---
-
-CREATE TABLE `event_types` (
-  `id` int(11) NOT NULL,
-  `name` varchar(20) NOT NULL,
-  `id_hourly_rate` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 TABLESPACE `innodb_system`;
-
--- --------------------------------------------------------
-
---
--- Struttura della tabella `hourly_rates`
+-- Table structure for table `hourly_rates`
 --
 
 CREATE TABLE `hourly_rates` (
@@ -93,7 +56,7 @@ CREATE TABLE `hourly_rates` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `parking_lots`
+-- Table structure for table `parking_lots`
 --
 
 CREATE TABLE `parking_lots` (
@@ -106,7 +69,7 @@ CREATE TABLE `parking_lots` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `parking_lots_user_categories_allowed`
+-- Table structure for table `parking_lots_user_categories_allowed`
 --
 
 CREATE TABLE `parking_lots_user_categories_allowed` (
@@ -118,7 +81,7 @@ CREATE TABLE `parking_lots_user_categories_allowed` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `parking_slots`
+-- Table structure for table `parking_slots`
 --
 
 CREATE TABLE `parking_slots` (
@@ -132,7 +95,7 @@ CREATE TABLE `parking_slots` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `users`
+-- Table structure for table `users`
 --
 
 CREATE TABLE `users` (
@@ -150,7 +113,7 @@ CREATE TABLE `users` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `user_categories`
+-- Table structure for table `user_categories`
 --
 
 CREATE TABLE `user_categories` (
@@ -164,7 +127,7 @@ CREATE TABLE `user_categories` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `vehicles`
+-- Table structure for table `vehicles`
 --
 
 CREATE TABLE `vehicles` (
@@ -179,7 +142,7 @@ CREATE TABLE `vehicles` (
 -- --------------------------------------------------------
 
 --
--- Struttura della tabella `vehicle_types`
+-- Table structure for table `vehicle_types`
 --
 
 CREATE TABLE `vehicle_types` (
@@ -189,57 +152,33 @@ CREATE TABLE `vehicle_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 TABLESPACE `innodb_system`;
 
 --
--- Indici per le tabelle scaricate
+-- Indexes for dumped tables
 --
 
 --
--- Indici per le tabelle `bookings`
+-- Indexes for table `bookings`
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_user` (`id_user`),
   ADD KEY `id_vehicle` (`id_vehicle`),
-  ADD KEY `id_parking_slot` (`id_parking_slot`);
+  ADD KEY `bookings_ibfk_3` (`id_parking_slot`);
 
 --
--- Indici per le tabelle `events`
---
-ALTER TABLE `events`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `upark_code` (`upark_code`),
-  ADD KEY `id_event_type` (`id_event_type`);
-
---
--- Indici per le tabelle `event_participations`
---
-ALTER TABLE `event_participations`
-  ADD PRIMARY KEY (`id_guest_user`,`id_event`),
-  ADD KEY `id_guest_user` (`id_guest_user`),
-  ADD KEY `id_event` (`id_event`);
-
---
--- Indici per le tabelle `event_types`
---
-ALTER TABLE `event_types`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `name` (`name`),
-  ADD KEY `id_hourly_rate` (`id_hourly_rate`);
-
---
--- Indici per le tabelle `hourly_rates`
+-- Indexes for table `hourly_rates`
 --
 ALTER TABLE `hourly_rates`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indici per le tabelle `parking_lots`
+-- Indexes for table `parking_lots`
 --
 ALTER TABLE `parking_lots`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `name` (`name`);
 
 --
--- Indici per le tabelle `parking_lots_user_categories_allowed`
+-- Indexes for table `parking_lots_user_categories_allowed`
 --
 ALTER TABLE `parking_lots_user_categories_allowed`
   ADD PRIMARY KEY (`id`),
@@ -247,7 +186,7 @@ ALTER TABLE `parking_lots_user_categories_allowed`
   ADD KEY `id_user_category` (`id_user_category`);
 
 --
--- Indici per le tabelle `parking_slots`
+-- Indexes for table `parking_slots`
 --
 ALTER TABLE `parking_slots`
   ADD PRIMARY KEY (`id`),
@@ -256,7 +195,7 @@ ALTER TABLE `parking_slots`
   ADD KEY `parking_slots_ibfk_3` (`id_parking_lot`);
 
 --
--- Indici per le tabelle `users`
+-- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
@@ -264,7 +203,7 @@ ALTER TABLE `users`
   ADD KEY `id_user_category` (`id_user_category`);
 
 --
--- Indici per le tabelle `user_categories`
+-- Indexes for table `user_categories`
 --
 ALTER TABLE `user_categories`
   ADD PRIMARY KEY (`id`),
@@ -272,7 +211,7 @@ ALTER TABLE `user_categories`
   ADD KEY `id_hourly_rate` (`id_hourly_rate`);
 
 --
--- Indici per le tabelle `vehicles`
+-- Indexes for table `vehicles`
 --
 ALTER TABLE `vehicles`
   ADD PRIMARY KEY (`id`),
@@ -281,88 +220,76 @@ ALTER TABLE `vehicles`
   ADD KEY `id_vehicle_type` (`id_vehicle_type`);
 
 --
--- Indici per le tabelle `vehicle_types`
+-- Indexes for table `vehicle_types`
 --
 ALTER TABLE `vehicle_types`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `name` (`name`);
 
 --
--- AUTO_INCREMENT per le tabelle scaricate
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT per la tabella `bookings`
+-- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `events`
---
-ALTER TABLE `events`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT per la tabella `event_types`
---
-ALTER TABLE `event_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT per la tabella `hourly_rates`
+-- AUTO_INCREMENT for table `hourly_rates`
 --
 ALTER TABLE `hourly_rates`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `parking_lots`
+-- AUTO_INCREMENT for table `parking_lots`
 --
 ALTER TABLE `parking_lots`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `parking_lots_user_categories_allowed`
+-- AUTO_INCREMENT for table `parking_lots_user_categories_allowed`
 --
 ALTER TABLE `parking_lots_user_categories_allowed`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `parking_slots`
+-- AUTO_INCREMENT for table `parking_slots`
 --
 ALTER TABLE `parking_slots`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `users`
+-- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
   MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `user_categories`
+-- AUTO_INCREMENT for table `user_categories`
 --
 ALTER TABLE `user_categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `vehicles`
+-- AUTO_INCREMENT for table `vehicles`
 --
 ALTER TABLE `vehicles`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT per la tabella `vehicle_types`
+-- AUTO_INCREMENT for table `vehicle_types`
 --
 ALTER TABLE `vehicle_types`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- Limiti per le tabelle scaricate
+-- Constraints for dumped tables
 --
 
 --
--- Limiti per la tabella `bookings`
+-- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -370,52 +297,33 @@ ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_3` FOREIGN KEY (`id_parking_slot`) REFERENCES `parking_slots` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `events`
---
-ALTER TABLE `events`
-  ADD CONSTRAINT `events_ibfk_1` FOREIGN KEY (`id_event_type`) REFERENCES `event_types` (`id`) ON UPDATE CASCADE;
-
---
--- Limiti per la tabella `event_participations`
---
-ALTER TABLE `event_participations`
-  ADD CONSTRAINT `event_participations_ibfk_1` FOREIGN KEY (`id_event`) REFERENCES `events` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `event_participations_ibfk_2` FOREIGN KEY (`id_guest_user`) REFERENCES `users` (`id`) ON UPDATE CASCADE;
-
---
--- Limiti per la tabella `event_types`
---
-ALTER TABLE `event_types`
-  ADD CONSTRAINT `event_types_ibfk_1` FOREIGN KEY (`id_hourly_rate`) REFERENCES `hourly_rates` (`id`) ON UPDATE CASCADE;
-
---
--- Limiti per la tabella `parking_lots_user_categories_allowed`
+-- Constraints for table `parking_lots_user_categories_allowed`
 --
 ALTER TABLE `parking_lots_user_categories_allowed`
   ADD CONSTRAINT `parking_lots_user_categories_allowed_ibfk_2` FOREIGN KEY (`id_user_category`) REFERENCES `user_categories` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT `parking_lots_user_categories_allowed_ibfk_3` FOREIGN KEY (`id_parking_lot`) REFERENCES `parking_lots` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `parking_slots`
+-- Constraints for table `parking_slots`
 --
 ALTER TABLE `parking_slots`
   ADD CONSTRAINT `parking_slots_ibfk_2` FOREIGN KEY (`id_vehicle_type`) REFERENCES `vehicle_types` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `parking_slots_ibfk_3` FOREIGN KEY (`id_parking_lot`) REFERENCES `parking_lots` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `users`
+-- Constraints for table `users`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`id_user_category`) REFERENCES `user_categories` (`id`) ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `user_categories`
+-- Constraints for table `user_categories`
 --
 ALTER TABLE `user_categories`
   ADD CONSTRAINT `user_categories_ibfk_1` FOREIGN KEY (`id_hourly_rate`) REFERENCES `hourly_rates` (`id`) ON UPDATE CASCADE;
 
 --
--- Limiti per la tabella `vehicles`
+-- Constraints for table `vehicles`
 --
 ALTER TABLE `vehicles`
   ADD CONSTRAINT `vehicles_ibfk_1` FOREIGN KEY (`id_vehicle_type`) REFERENCES `vehicle_types` (`id`) ON UPDATE CASCADE,
