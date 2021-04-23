@@ -353,26 +353,31 @@ class Park(QWidget):
         if response.json():
             user_categories = [UserCategory(**user_category) for user_category in response.json()]
 
-        if user_categories:             # not empty
             try:
                 category_index = user_categories.index(UserCategory(id = user_category_id))
             except ValueError:
                 return
             else:
                 hourly_rate_id = user_categories[category_index].get_id_hourly_rate()
+                if hourly_rate_id == None:
+                    QMessageBox.alert(self, "Alert", "There isn't yet an hourly_rate associated with this category.") 
+                    return
+        else:
+            return
 
         # obtain hourly rates and filter
         response = make_http_request(self.https_session, "get", "hourly_rates")
         if response.json():
             hourly_rates = [HourlyRate(**hourly_rate) for hourly_rate in response.json()]
 
-        if hourly_rates:
             try:
                 hourly_rate_index = hourly_rates.index(HourlyRate(id = hourly_rate_id))
             except ValueError:
                 return
             else:
                 hourly_rate_amount = float(hourly_rates[hourly_rate_index].get_amount())
+        else:
+            return
 
         # 2. rate_percentage
         try:

@@ -19,6 +19,7 @@ class OptionsKeypad(QWidget):
         super().__init__()
         self.https_session = https_session
         self.entity_type = entity_type
+        self.entity_objs = []
         self.hourly_rates = hourly_rates
         OptionsKeypad.initUI(self)
 
@@ -58,15 +59,15 @@ class OptionsKeypad(QWidget):
 
     def get_items(self):
         self.items_list.clear()
-        self.entity_objs = []
+        self.entity_objs.clear()
         response = make_http_request(self.https_session, "get", self.entity_type)
         if response.json():
             if self.entity_type == "hourly_rates":
-                self.entity_objs = [HourlyRate(**hourly_rate) for hourly_rate in response.json()]
+                self.entity_objs.extend([HourlyRate(**hourly_rate) for hourly_rate in response.json()])
             elif self.entity_type == "vehicle_types":
-                self.entity_objs = [VehicleType(**vehicle_type) for vehicle_type in response.json()]
+                self.entity_objs.extend([VehicleType(**vehicle_type) for vehicle_type in response.json()])
             elif self.entity_type == "user_categories":
-                self.entity_objs = [UserCategory(**user_category) for user_category in response.json() if user_category["name"] != "Admin"]
+                self.entity_objs.extend([UserCategory(**user_category) for user_category in response.json() if user_category["name"] != "Admin"])
             else:
                 return
         else:

@@ -30,21 +30,46 @@ void Database::db_init(){
         " JOIN db_upark.user_categories up_uc ON uni_uc.name=up_uc.name WHERE up_uc.name IS NULL"));
 
         connection->setSchema("db_upark");
+        int query_success;
 
         while(res->next()){
             std::cout << "New Category found: " <<  res->getString("name")  << std::endl;
 
-            pstmt.reset(connection->prepareStatement("INSERT INTO db_upark.user_categories (name, id_hourly_rate) VALUES (?, 4)"));
+            pstmt.reset(connection->prepareStatement("INSERT INTO db_upark.user_categories (name, id_hourly_rate) VALUES (?, ?)"));
             pstmt->setString(1, res->getString("name"));
-            int success = pstmt->executeUpdate();
+            pstmt->setNull(2, 0);
+            query_success = pstmt->executeUpdate();
 
-            if(success==0){
+            if(query_success==0){
                 throw DatabaseException("Can't add new category");
             }
             else{
                 std::cout << "-> Category added!" << std::endl;
             }
         }
+        //Creation of Admin category
+        pstmt.reset(connection->prepareStatement("INSERT IGNORE INTO user_categories (name, id_hourly_rate) VALUES (?, ?)"));
+        pstmt->setString(1, "Admin");
+        pstmt->setNull(2, 0);
+        query_success = pstmt->executeUpdate();
+
+        //Creation of user Admin
+        stmt.reset(connection->createStatement());
+        res.reset(stmt->executeQuery("SELECT id FROM user_categories WHERE name = 'Admin'"));
+        res->next();
+        int id_admin_category = res->getInt("id");
+
+        pstmt.reset(connection->prepareStatement("INSERT IGNORE INTO db_upark.users (email, name, surname, password, wallet, disability, active_account, id_user_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"));
+        pstmt->setString(1, "admin@admin");
+        pstmt->setString(2, "admin");
+        pstmt->setString(3, "admin");
+        pstmt->setString(4, "adminadmin");
+        pstmt->setDouble(5, 0.0);
+        pstmt->setBoolean(6, false);
+        pstmt->setBoolean(7, true);
+        pstmt->setInt(8, id_admin_category);
+        query_success = pstmt->executeUpdate();
+
         std::cout << "--- upark_db is updated! ---" << std::endl;
     }
     catch(sql::SQLException& e){
@@ -240,8 +265,17 @@ void Database::update_query(const UserCategory& t){
     " WHERE id = ?"));
     pstmt->setString(1, t.getName());
     pstmt->setInt(2, t.getIdHourlyRate());
-    pstmt->setString(3, t.getServiceValidityStart());
-    pstmt->setString(4, t.getServiceValidityEnd());
+
+    if (t.getServiceValidityStart() == "")
+        pstmt->setNull(3, 0);
+    else
+        pstmt->setString(3, t.getServiceValidityStart());
+
+    if (t.getServiceValidityEnd() == "")
+        pstmt->setNull(4, 0);
+    else
+        pstmt->setString(4, t.getServiceValidityEnd());
+
     pstmt->setInt(5, t.getId());
 }
 
