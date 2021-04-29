@@ -231,10 +231,7 @@ class Park(QWidget):
     # get info on parking lots
     def get_parking_lots(self):
         self.parking_lots_list.clear()
-
-        # self.parking_lots = []
-        # self.parking_lot = None                   # selected parking lot
-
+        
         response = make_http_request(self.https_session, "get", "parking_lots")
 
         if response.json():                           # if json is not null
@@ -287,7 +284,7 @@ class Park(QWidget):
                     return
                 else:
                     vehicle_type_name = self.vehicle_types[vehicle_type_index].get_name()
-                    self.vehicle_types_table.setItem(i, 0, QTableWidgetItem(vehicle_type_name.capitalize()))
+                    self.vehicle_types_table.setItem(i, 0, QTableWidgetItem(vehicle_type_name))
 
         day = self.cal.selectedDate()
         day_before = day.addDays(-1).toString(Qt.ISODate)
@@ -360,7 +357,7 @@ class Park(QWidget):
             else:
                 hourly_rate_id = user_categories[category_index].get_id_hourly_rate()
                 if hourly_rate_id == None:
-                    QMessageBox.alert(self, "Alert", "There isn't yet an hourly_rate associated with this category.") 
+                    QMessageBox.alert(self, "Alert", "There isn't yet an hourly_rate associated with this category.")
                     return
         else:
             return
@@ -422,7 +419,7 @@ class Park(QWidget):
         slot_vehicle_type = self.vehicle_types_table.item(self.tableWidget.currentRow(), 0).text()
 
         try:
-            vehicle_type_index = self.vehicle_types.index(VehicleType(name = slot_vehicle_type.lower()))
+            vehicle_type_index = self.vehicle_types.index(VehicleType(name = slot_vehicle_type))
         except ValueError:
             return
         else:
